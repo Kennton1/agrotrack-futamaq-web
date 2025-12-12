@@ -31,7 +31,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast.error('Las contraseñas no coinciden')
       return
@@ -46,7 +46,7 @@ export default function RegisterPage() {
 
     try {
       const { error } = await signUp(formData.email, formData.password, formData.fullName)
-      
+
       if (error) {
         toast.error('Error al crear cuenta: ' + error.message)
       } else {
@@ -76,11 +76,7 @@ export default function RegisterPage() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Únete al sistema de gestión agrícola
         </p>
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800 text-center">
-            <strong>Modo Demo:</strong> El registro simulará la creación de cuenta
-          </p>
-        </div>
+
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
