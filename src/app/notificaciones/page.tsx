@@ -1,0 +1,969 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Card, CardContent } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { 
+  Bell, CheckCircle, XCircle, AlertTriangle, Info, 
+  Clock, Mail, MessageSquare, Truck, Wrench, Fuel, 
+  Package, Filter, Search, Check, Trash2,
+  Settings, RefreshCw, Archive, AlertCircle, Eye, MapPin, X
+} from 'lucide-react'
+import { formatDate, formatTime } from '@/lib/utils'
+import { toast } from 'react-hot-toast'
+import { useApp } from '@/contexts/AppContext'
+
+interface Notification {
+  id: number
+  type: 'info' | 'warning' | 'error' | 'success'
+  category: 'maintenance' | 'fuel' | 'stock' | 'system' | 'work_order' | 'machinery'
+  title: string
+  message: string
+  isRead: boolean
+  createdAt: string
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  actionRequired: boolean
+  actionUrl?: string
+  relatedId?: number
+}
+
+interface Incident {
+  id: number
+  title: string
+  description: string
+  type: 'mechanical' | 'operational' | 'safety' | 'environmental' | 'other'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  reportedBy: string
+  reportedAt: string
+  assignedTo?: string
+  machineryId?: number
+  machineryCode?: string
+  location?: string
+  resolution?: string
+  resolvedAt?: string
+  images?: string[]
+}
+
+export default function NotificacionesPage() {
+  const { machinery } = useApp()
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [incidents, setIncidents] = useState<Incident[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [activeTab, setActiveTab] = useState<'notifications' | 'incidents'>('notifications')
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
+
+  useEffect(() => {
+    // Mock data para notificaciones
+    const mockNotifications: Notification[] = [
+      {
+        id: 1,
+        type: 'warning',
+        category: 'maintenance',
+        title: 'Mantenimiento Programado',
+        message: 'El tractor T001 requiere mantenimiento preventivo en las próximas 24 horas',
+        isRead: false,
+        createdAt: '2024-03-25T10:30:00Z',
+        priority: 'high',
+        actionRequired: true,
+        actionUrl: '/mantenimientos',
+        relatedId: 1
+      },
+      {
+        id: 2,
+        type: 'error',
+        category: 'fuel',
+        title: 'Consumo Anómalo de Combustible',
+        message: 'El tractor T002 ha consumido 50% más combustible de lo normal en las últimas 2 horas',
+        isRead: false,
+        createdAt: '2024-03-25T09:15:00Z',
+        priority: 'critical',
+        actionRequired: true,
+        actionUrl: '/combustible',
+        relatedId: 2
+      },
+      {
+        id: 3,
+        type: 'warning',
+        category: 'stock',
+        title: 'Stock Bajo de Repuestos',
+        message: 'Filtro de aceite motor (FIL-001) está por debajo del stock mínimo',
+        isRead: true,
+        createdAt: '2024-03-25T08:45:00Z',
+        priority: 'medium',
+        actionRequired: true,
+        actionUrl: '/repuestos',
+        relatedId: 1
+      },
+      {
+        id: 4,
+        type: 'success',
+        category: 'work_order',
+        title: 'Orden de Trabajo Completada',
+        message: 'La orden OT-2024-001 ha sido completada exitosamente',
+        isRead: true,
+        createdAt: '2024-03-25T07:20:00Z',
+        priority: 'low',
+        actionRequired: false,
+        actionUrl: '/ordenes-trabajo',
+        relatedId: 1
+      },
+      {
+        id: 5,
+        type: 'info',
+        category: 'system',
+        title: 'Respaldo Completado',
+        message: 'El respaldo automático de la base de datos se completó exitosamente',
+        isRead: true,
+        createdAt: '2024-03-25T06:00:00Z',
+        priority: 'low',
+        actionRequired: false
+      },
+      {
+        id: 6,
+        type: 'warning',
+        category: 'machinery',
+        title: 'Maquinaria Fuera de Servicio',
+        message: 'El pulverizador PUL001 ha sido marcado como fuera de servicio',
+        isRead: false,
+        createdAt: '2024-03-24T16:30:00Z',
+        priority: 'high',
+        actionRequired: true,
+        actionUrl: '/maquinarias',
+        relatedId: 6
+      },
+      {
+        id: 7,
+        type: 'info',
+        category: 'fuel',
+        title: 'Carga de Combustible Registrada',
+        message: 'Se registró una carga de 150L de combustible para el tractor T001',
+        isRead: true,
+        createdAt: '2024-03-24T14:15:00Z',
+        priority: 'low',
+        actionRequired: false,
+        actionUrl: '/combustible',
+        relatedId: 1
+      },
+      {
+        id: 8,
+        type: 'error',
+        category: 'system',
+        title: 'Error de Conexión',
+        message: 'Se perdió la conexión con el servidor de ubicación GPS',
+        isRead: false,
+        createdAt: '2024-03-24T12:00:00Z',
+        priority: 'critical',
+        actionRequired: true
+      }
+    ]
+    
+    setNotifications(mockNotifications)
+    
+    // Mock data para incidencias
+    const mockIncidents: Incident[] = [
+      {
+        id: 1,
+        title: 'Falla en Sistema Hidráulico',
+        description: 'El tractor John Deere 6120M presenta pérdida de presión en el sistema hidráulico. Se detectó fuga de aceite en la manguera principal.',
+        type: 'mechanical',
+        severity: 'high',
+        status: 'open',
+        reportedBy: 'Juan Pérez',
+        reportedAt: '2024-03-25T10:00:00Z',
+        assignedTo: 'Roberto Silva',
+        machineryId: 1,
+        machineryCode: 'TR-001',
+        location: 'Parcela 12, Sector Norte'
+      },
+      {
+        id: 2,
+        title: 'Sobrecarga de Combustible Detectada',
+        description: 'El tractor T002 ha consumido 50% más combustible de lo normal. Posible problema en el sistema de inyección o fuga no detectada.',
+        type: 'operational',
+        severity: 'critical',
+        status: 'in_progress',
+        reportedBy: 'Sistema Automático',
+        reportedAt: '2024-03-25T09:15:00Z',
+        assignedTo: 'Carlos Rodríguez',
+        machineryId: 35,
+        machineryCode: 'TR-002',
+        location: 'Campo Central'
+      },
+      {
+        id: 3,
+        title: 'Accidente Menor en Campo',
+        description: 'Colisión menor entre tractor y implemento durante operación de rastraje. No hay heridos, pero hay daños en el implemento.',
+        type: 'safety',
+        severity: 'medium',
+        status: 'resolved',
+        reportedBy: 'María González',
+        reportedAt: '2024-03-24T14:30:00Z',
+        assignedTo: 'Pedro Martínez',
+        machineryId: 1,
+        machineryCode: 'TR-001',
+        location: 'Potrero Norte',
+        resolution: 'Implemento reparado, se realizó inspección de seguridad completa.',
+        resolvedAt: '2024-03-24T18:00:00Z'
+      },
+      {
+        id: 4,
+        title: 'Derrame de Combustible',
+        description: 'Derrame de aproximadamente 20 litros de combustible durante carga. Área contenida pero requiere limpieza.',
+        type: 'environmental',
+        severity: 'medium',
+        status: 'open',
+        reportedBy: 'Luis Fernández',
+        reportedAt: '2024-03-24T11:20:00Z',
+        location: 'Bodega Principal'
+      },
+      {
+        id: 5,
+        title: 'Falla en Sistema de Transmisión',
+        description: 'La cosechadora CG-001 presenta problemas al cambiar de marcha. Se escuchan ruidos anómalos en la caja de cambios.',
+        type: 'mechanical',
+        severity: 'high',
+        status: 'in_progress',
+        reportedBy: 'Ana López',
+        reportedAt: '2024-03-23T16:45:00Z',
+        assignedTo: 'Roberto Silva',
+        machineryId: 23,
+        machineryCode: 'CG-001',
+        location: 'Campo Sur'
+      }
+    ]
+    
+    setIncidents(mockIncidents)
+    setLoading(false)
+  }, [])
+
+  const filteredNotifications = notifications.filter(notification => {
+    const matchesFilter = filter === 'all' || 
+                         (filter === 'unread' && !notification.isRead) ||
+                         (filter === 'read' && notification.isRead) ||
+                         notification.category === filter ||
+                         notification.type === filter ||
+                         notification.priority === filter
+    
+    const matchesSearch = searchTerm === '' || 
+                         notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         notification.message.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    return matchesFilter && matchesSearch
+  })
+
+  const getNotificationIcon = (type: string, category: string) => {
+    if (category === 'maintenance') return <Wrench className="h-5 w-5" />
+    if (category === 'fuel') return <Fuel className="h-5 w-5" />
+    if (category === 'stock') return <Package className="h-5 w-5" />
+    if (category === 'machinery') return <Truck className="h-5 w-5" />
+    if (category === 'work_order') return <CheckCircle className="h-5 w-5" />
+    if (category === 'system') return <Settings className="h-5 w-5" />
+    
+    switch (type) {
+      case 'error': return <XCircle className="h-5 w-5" />
+      case 'warning': return <AlertTriangle className="h-5 w-5" />
+      case 'success': return <CheckCircle className="h-5 w-5" />
+      default: return <Info className="h-5 w-5" />
+    }
+  }
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'error': return 'text-red-500'
+      case 'warning': return 'text-yellow-500'
+      case 'success': return 'text-green-500'
+      default: return 'text-blue-500'
+    }
+  }
+
+  const getPriorityBadgeVariant = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'danger' as const
+      case 'high': return 'warning' as const
+      case 'medium': return 'info' as const
+      default: return 'success' as const
+    }
+  }
+
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'Crítica'
+      case 'high': return 'Alta'
+      case 'medium': return 'Media'
+      default: return 'Baja'
+    }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'maintenance': return 'Mantenimiento'
+      case 'fuel': return 'Combustible'
+      case 'stock': return 'Stock'
+      case 'system': return 'Sistema'
+      case 'work_order': return 'Orden de Trabajo'
+      case 'machinery': return 'Maquinaria'
+      default: return 'General'
+    }
+  }
+
+  const markAsRead = (id: number) => {
+    setNotifications(notifications.map(notification => 
+      notification.id === id ? { ...notification, isRead: true } : notification
+    ))
+    toast.success('Notificación marcada como leída')
+  }
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(notification => ({ ...notification, isRead: true })))
+    toast.success('Todas las notificaciones marcadas como leídas')
+  }
+
+  const deleteNotification = (id: number) => {
+    setNotifications(notifications.filter(notification => notification.id !== id))
+    toast.success('Notificación eliminada')
+  }
+
+  const unreadCount = notifications.filter(n => !n.isRead).length
+  const criticalCount = notifications.filter(n => n.priority === 'critical' && !n.isRead).length
+  
+  const openIncidentsCount = incidents.filter(i => i.status === 'open').length
+  const criticalIncidentsCount = incidents.filter(i => i.severity === 'critical' && i.status !== 'closed').length
+  
+  const filteredIncidents = incidents.filter(incident => {
+    const matchesSearch = searchTerm === '' || 
+                         incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         incident.description.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesFilter = filter === 'all' || 
+                         incident.status === filter ||
+                         incident.type === filter ||
+                         incident.severity === filter
+    
+    return matchesSearch && matchesFilter
+  })
+  
+  const getIncidentTypeLabel = (type: string) => {
+    switch (type) {
+      case 'mechanical': return 'Mecánica'
+      case 'operational': return 'Operacional'
+      case 'safety': return 'Seguridad'
+      case 'environmental': return 'Ambiental'
+      default: return 'Otro'
+    }
+  }
+  
+  const getIncidentSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'text-red-600 bg-red-50 border-red-200'
+      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200'
+      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
+      default: return 'text-blue-600 bg-blue-50 border-blue-200'
+    }
+  }
+  
+  const getIncidentStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'text-red-600 bg-red-50'
+      case 'in_progress': return 'text-yellow-600 bg-yellow-50'
+      case 'resolved': return 'text-green-600 bg-green-50'
+      default: return 'text-gray-600 bg-gray-50'
+    }
+  }
+  
+  const getIncidentStatusLabel = (status: string) => {
+    switch (status) {
+      case 'open': return 'Abierta'
+      case 'in_progress': return 'En Progreso'
+      case 'resolved': return 'Resuelta'
+      default: return 'Cerrada'
+    }
+  }
+
+  const getMachineryName = (machineryId?: number) => {
+    if (!machineryId) return null
+    const mach = machinery.find(m => m.id === machineryId)
+    return mach ? `${mach.brand} ${mach.model}` : null
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Notificaciones e Incidencias</h1>
+          <p className="text-gray-600">Gestiona las alertas, notificaciones e incidencias del sistema</p>
+        </div>
+        <div className="flex space-x-2">
+          {activeTab === 'notifications' && (
+            <>
+              <Button
+                variant="outline"
+                onClick={markAllAsRead}
+                className="flex items-center space-x-2"
+              >
+                <Check className="h-4 w-4" />
+                <span>Marcar Todas como Leídas</span>
+              </Button>
+            </>
+          )}
+          <Button
+            variant="outline"
+            className="flex items-center space-x-2"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Configurar</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'notifications'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Bell className="h-4 w-4" />
+              <span>Notificaciones</span>
+              {unreadCount > 0 && (
+                <Badge variant="warning" size="sm">{unreadCount}</Badge>
+              )}
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('incidents')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'incidents'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>Incidencias</span>
+              {openIncidentsCount > 0 && (
+                <Badge variant="danger" size="sm">{openIncidentsCount}</Badge>
+              )}
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {/* Estadísticas rápidas */}
+      {activeTab === 'notifications' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{notifications.length}</p>
+                </div>
+                <Bell className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">No Leídas</p>
+                  <p className="text-2xl font-bold text-orange-600">{unreadCount}</p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Críticas</p>
+                  <p className="text-2xl font-bold text-red-600">{criticalCount}</p>
+                </div>
+                <XCircle className="h-8 w-8 text-red-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Leídas</p>
+                  <p className="text-2xl font-bold text-green-600">{notifications.length - unreadCount}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'incidents' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{incidents.length}</p>
+                </div>
+                <AlertCircle className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Abiertas</p>
+                  <p className="text-2xl font-bold text-red-600">{openIncidentsCount}</p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Críticas</p>
+                  <p className="text-2xl font-bold text-red-600">{criticalIncidentsCount}</p>
+                </div>
+                <XCircle className="h-8 w-8 text-red-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Resueltas</p>
+                  <p className="text-2xl font-bold text-green-600">{incidents.filter(i => i.status === 'resolved' || i.status === 'closed').length}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Filtros */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder={activeTab === 'notifications' ? "Buscar notificaciones..." : "Buscar incidencias..."}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full"
+              />
+            </div>
+            
+            <div>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                {activeTab === 'notifications' ? (
+                  <>
+                    <option value="all">Todas las notificaciones</option>
+                    <option value="unread">No leídas</option>
+                    <option value="read">Leídas</option>
+                    <option value="critical">Críticas</option>
+                    <option value="maintenance">Mantenimiento</option>
+                    <option value="fuel">Combustible</option>
+                    <option value="stock">Stock</option>
+                    <option value="system">Sistema</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="all">Todas las incidencias</option>
+                    <option value="open">Abiertas</option>
+                    <option value="in_progress">En Progreso</option>
+                    <option value="resolved">Resueltas</option>
+                    <option value="closed">Cerradas</option>
+                    <option value="mechanical">Mecánicas</option>
+                    <option value="operational">Operacionales</option>
+                    <option value="safety">Seguridad</option>
+                    <option value="environmental">Ambientales</option>
+                    <option value="critical">Críticas</option>
+                    <option value="high">Alta</option>
+                    <option value="medium">Media</option>
+                    <option value="low">Baja</option>
+                  </>
+                )}
+              </select>
+            </div>
+            
+            {activeTab === 'notifications' && (
+              <div>
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="all">Todos los tipos</option>
+                  <option value="error">Errores</option>
+                  <option value="warning">Advertencias</option>
+                  <option value="info">Información</option>
+                  <option value="success">Éxito</option>
+                </select>
+              </div>
+            )}
+            
+            <Button variant="outline" className="flex items-center space-x-2">
+              <Filter className="h-4 w-4" />
+              <span>Filtros</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de notificaciones */}
+      {activeTab === 'notifications' && (
+        <div className="space-y-4">
+          {filteredNotifications.map((notification) => (
+            <Card 
+              key={notification.id} 
+              className={`hover:shadow-md transition-shadow ${
+                !notification.isRead ? 'ring-2 ring-blue-100 bg-blue-50' : ''
+              }`}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className={getNotificationColor(notification.type)}>
+                        {getNotificationIcon(notification.type, notification.category)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {notification.title}
+                          </h3>
+                          {!notification.isRead && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">{notification.message}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{formatDate(notification.createdAt)} {formatTime(notification.createdAt)}</span>
+                      </div>
+                      <Badge variant={getPriorityBadgeVariant(notification.priority)}>
+                        {getPriorityLabel(notification.priority)}
+                      </Badge>
+                      <Badge variant="default">
+                        {getCategoryLabel(notification.category)}
+                      </Badge>
+                      {notification.actionRequired && (
+                        <Badge variant="warning">
+                          Requiere Acción
+                        </Badge>
+                      )}
+                    </div>
+
+                    {notification.actionUrl && (
+                      <div className="mt-3">
+                        <Button
+                          size="sm"
+                          onClick={() => window.location.href = notification.actionUrl!}
+                          className="flex items-center space-x-2"
+                        >
+                          <span>Ver Detalles</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col items-end space-y-2">
+                    <div className="flex space-x-2">
+                      {!notification.isRead && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => markAsRead(notification.id)}
+                          className="flex items-center space-x-1"
+                        >
+                          <Check className="h-4 w-4" />
+                          <span>Marcar</span>
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteNotification(notification.id)}
+                        className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Eliminar</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'notifications' && filteredNotifications.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron notificaciones</h3>
+            <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lista de incidencias */}
+      {activeTab === 'incidents' && (
+        <div className="space-y-4">
+          {filteredIncidents.map((incident) => (
+            <Card 
+              key={incident.id} 
+              className={`hover:shadow-md transition-shadow ${
+                incident.status === 'open' ? 'ring-2 ring-red-100 bg-red-50/50' : ''
+              }`}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <AlertCircle className={`h-5 w-5 ${getIncidentSeverityColor(incident.severity).split(' ')[0] || 'text-gray-500'}`} />
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {incident.title}
+                          </h3>
+                          {incident.status === 'open' && (
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{incident.description}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-3 text-sm mb-3">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentSeverityColor(incident.severity)}`}>
+                        {incident.severity === 'critical' ? 'Crítica' : 
+                         incident.severity === 'high' ? 'Alta' :
+                         incident.severity === 'medium' ? 'Media' : 'Baja'}
+                      </span>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentStatusColor(incident.status)}`}>
+                        {getIncidentStatusLabel(incident.status)}
+                      </span>
+                      <Badge variant="default">
+                        {getIncidentTypeLabel(incident.type)}
+                      </Badge>
+                      {getMachineryName(incident.machineryId) && (
+                        <Badge variant="info">
+                          {getMachineryName(incident.machineryId)}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-500 mb-3">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-4 w-4" />
+                        <span>Reportada: {formatDate(incident.reportedAt)}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Reportado por:</span> {incident.reportedBy}
+                      </div>
+                      {incident.assignedTo && (
+                        <div>
+                          <span className="font-medium">Asignado a:</span> {incident.assignedTo}
+                        </div>
+                      )}
+                      {incident.location && (
+                        <div className="flex items-center space-x-1">
+                          <MapPin className="h-4 w-4" />
+                          <span className="truncate">{incident.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {incident.resolution && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-medium text-green-800 mb-1">Resolución:</p>
+                        <p className="text-sm text-green-700">{incident.resolution}</p>
+                        {incident.resolvedAt && (
+                          <p className="text-xs text-green-600 mt-1">
+                            Resuelta el: {formatDate(incident.resolvedAt)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        onClick={() => setSelectedIncident(incident)}
+                        className="flex items-center space-x-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span>Ver Detalles</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'incidents' && filteredIncidents.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron incidencias</h3>
+            <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Modal de detalles de incidencia */}
+      {selectedIncident && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className={`h-6 w-6 ${getIncidentSeverityColor(selectedIncident.severity).split(' ')[0] || 'text-gray-500'}`} />
+                <h3 className="text-2xl font-semibold text-gray-900">{selectedIncident.title}</h3>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedIncident(null)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Descripción</p>
+                <p className="text-gray-900">{selectedIncident.description}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Tipo</p>
+                  <Badge variant="default">{getIncidentTypeLabel(selectedIncident.type)}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Severidad</p>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentSeverityColor(selectedIncident.severity)}`}>
+                    {selectedIncident.severity === 'critical' ? 'Crítica' : 
+                     selectedIncident.severity === 'high' ? 'Alta' :
+                     selectedIncident.severity === 'medium' ? 'Media' : 'Baja'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Estado</p>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentStatusColor(selectedIncident.status)}`}>
+                    {getIncidentStatusLabel(selectedIncident.status)}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Reportado por</p>
+                  <p className="text-gray-900">{selectedIncident.reportedBy}</p>
+                </div>
+                {selectedIncident.assignedTo && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Asignado a</p>
+                    <p className="text-gray-900">{selectedIncident.assignedTo}</p>
+                  </div>
+                )}
+                {getMachineryName(selectedIncident.machineryId) && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Maquinaria</p>
+                    <p className="text-gray-900">{getMachineryName(selectedIncident.machineryId)}</p>
+                  </div>
+                )}
+                {selectedIncident.location && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Ubicación</p>
+                    <p className="text-gray-900">{selectedIncident.location}</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Fecha de Reporte</p>
+                <p className="text-gray-900">{formatDate(selectedIncident.reportedAt)} {formatTime(selectedIncident.reportedAt)}</p>
+              </div>
+
+              {selectedIncident.resolution && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-medium text-green-800 mb-2">Resolución</p>
+                  <p className="text-green-700">{selectedIncident.resolution}</p>
+                  {selectedIncident.resolvedAt && (
+                    <p className="text-xs text-green-600 mt-2">
+                      Resuelta el: {formatDate(selectedIncident.resolvedAt)} {formatTime(selectedIncident.resolvedAt)}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedIncident(null)}
+                >
+                  Cerrar
+                </Button>
+                {selectedIncident.status === 'open' && (
+                  <Button>
+                    Tomar Incidencia
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

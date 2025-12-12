@@ -1,0 +1,529 @@
+{
+    "users": [
+        {
+            "id": "1",
+            "email": "admin@futamaq.cl",
+            "full_name": "Administrador FUTAMAQ",
+            "role": "administrador",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "last_login": "2024-01-01T00:00:00Z"
+        },
+        {
+            "id": "2",
+            "email": "operador@futamaq.cl",
+            "full_name": "Operador de Campo",
+            "role": "operador",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "last_login": "2024-01-01T00:00:00Z"
+        },
+        {
+            "id": "3",
+            "email": "cliente@futamaq.cl",
+            "full_name": "Cliente Demo",
+            "role": "cliente",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "last_login": "2024-01-01T00:00:00Z"
+        }
+    ],
+    "clients": [
+        {
+            "id": 1,
+            "name": "Agrícola Los Robles S.A.",
+            "rut": "76.123.456-7",
+            "contact_person": "Juan Pérez Soto",
+            "phone": "+56912345678",
+            "email": "juan.perez@losrobles.cl",
+            "address": "Ruta 5 Sur Km 765, Los Lagos"
+        },
+        {
+            "id": 2,
+            "name": "Cooperativa Campesina Valdivia",
+            "rut": "65.987.654-3",
+            "contact_person": "María González",
+            "phone": "+56987654321",
+            "email": "coordinacion@coopvaldivia.cl",
+            "address": "Camino Rural Los Laureles s/n"
+        },
+        {
+            "id": 3,
+            "name": "Agrícola San José Ltda.",
+            "rut": "78.456.789-2",
+            "contact_person": "Carlos Rodríguez",
+            "phone": "+56945678912",
+            "email": "carlos@san-jose.cl",
+            "address": "Camino a Panguipulli Km 12"
+        }
+    ],
+    "machinery": [
+        {
+            "id": 1,
+            "code": "TR-001",
+            "patent": "ABCD12",
+            "type": "tractor",
+            "brand": "John Deere",
+            "model": "6120M",
+            "year": 2020,
+            "total_hours": 2450,
+            "status": "disponible",
+            "fuel_capacity": 200,
+            "hourly_cost": 45000,
+            "last_location": {
+                "lat": -33.4489,
+                "lng": -70.6693,
+                "address": "Parcela 12, Sector Norte"
+            },
+            "created_at": "2024-01-15T10:00:00Z"
+        },
+        {
+            "id": 35,
+            "code": "TR-002",
+            "patent": "EFGH34",
+            "type": "tractor",
+            "brand": "New Holland",
+            "model": "T6080",
+            "year": 2019,
+            "total_hours": 2890,
+            "status": "disponible",
+            "fuel_capacity": 180,
+            "hourly_cost": 42000,
+            "last_location": {
+                "lat": -33.4490,
+                "lng": -70.6694,
+                "address": "Bodega Principal"
+            },
+            "created_at": "2024-01-20T10:00:00Z"
+        },
+        {
+            "id": 36,
+            "code": "TR-003",
+            "patent": "IJKL56",
+            "type": "tractor",
+            "brand": "Case IH",
+            "model": "Puma 165",
+            "year": 2021,
+            "total_hours": 1850,
+            "status": "disponible",
+            "fuel_capacity": 220,
+            "hourly_cost": 48000,
+            "last_location": {
+                "lat": -33.4491,
+                "lng": -70.6695,
+                "address": "Campo Central"
+            },
+            "created_at": "2024-02-05T10:00:00Z"
+        },
+        {
+            "id": 37,
+            "code": "TR-004",
+            "patent": "MNOP78",
+            "type": "tractor",
+            "brand": "Massey Ferguson",
+            "model": "MF 6713",
+            "year": 2020,
+            "total_hours": 2100,
+            "status": "disponible",
+            "fuel_capacity": 190,
+            "hourly_cost": 44000,
+            "last_location": {
+                "lat": -33.4492,
+                "lng": -70.6696,
+                "address": "Sector Este"
+            },
+            "created_at": "2024-02-10T10:00:00Z"
+        },
+        {
+            "id": 38,
+            "code": "TR-005",
+            "patent": "QRST56",
+            "type": "tractor",
+            "brand": "Fendt",
+            "model": "516 Vario",
+            "year": 2022,
+            "total_hours": 1200,
+            "status": "disponible",
+            "fuel_capacity": 210,
+            "hourly_cost": 50000,
+            "last_location": {
+                "lat": -33.4493,
+                "lng": -70.6697,
+                "address": "Potrero Norte"
+            },
+            "created_at": "2024-03-01T10:00:00Z"
+        },
+        {
+            "id": 39,
+            "code": "TR-006",
+            "patent": "UVWX12",
+            "type": "tractor",
+            "brand": "Valtra",
+            "model": "N154",
+            "year": 2021,
+            "total_hours": 1650,
+            "status": "disponible",
+            "fuel_capacity": 195,
+            "hourly_cost": 43000,
+            "last_location": {
+                "lat": -33.4494,
+                "lng": -70.6698,
+                "address": "Sector Sur"
+            },
+            "created_at": "2024-03-15T10:00:00Z"
+        },
+        {
+            "id": 40,
+            "code": "TR-007",
+            "patent": "YZAB34",
+            "type": "tractor",
+            "brand": "Claas",
+            "model": "Axion 850",
+            "year": 2020,
+            "total_hours": 2200,
+            "status": "disponible",
+            "fuel_capacity": 205,
+            "hourly_cost": 47000,
+            "last_location": {
+                "lat": -33.4495,
+                "lng": -70.6699,
+                "address": "Campo Sur"
+            },
+            "created_at": "2024-04-01T10:00:00Z"
+        },
+        {
+            "id": 41,
+            "code": "TR-008",
+            "patent": "CDEF56",
+            "type": "tractor",
+            "brand": "Kubota",
+            "model": "M7-171",
+            "year": 2021,
+            "total_hours": 1500,
+            "status": "disponible",
+            "fuel_capacity": 175,
+            "hourly_cost": 40000,
+            "last_location": {
+                "lat": -33.4496,
+                "lng": -70.6700,
+                "address": "Lote 5"
+            },
+            "created_at": "2024-04-10T10:00:00Z"
+        },
+        {
+            "id": 2,
+            "code": "AR-001",
+            "patent": "AR001",
+            "type": "implemento",
+            "brand": "Arado de vertedera",
+            "model": "Estándar",
+            "year": 2021,
+            "total_hours": 890,
+            "status": "disponible",
+            "fuel_capacity": 0,
+            "hourly_cost": 12000,
+            "last_location": {
+                "lat": -33.4490,
+                "lng": -70.6694,
+                "address": "Bodega Principal"
+            },
+            "created_at": "2024-02-10T10:00:00Z"
+        },
+        {
+            "id": 23,
+            "code": "CG-001",
+            "patent": "CG001",
+            "type": "cosechadora",
+            "brand": "Cosechadora de granos",
+            "model": "Combine",
+            "year": 2019,
+            "total_hours": 3200,
+            "status": "en_mantencion",
+            "fuel_capacity": 600,
+            "hourly_cost": 85000,
+            "last_location": {
+                "lat": -33.4488,
+                "lng": -70.6692,
+                "address": "Taller Central"
+            },
+            "created_at": "2023-11-20T10:00:00Z"
+        },
+        {
+            "id": 34,
+            "code": "CM-002",
+            "patent": "QRST90",
+            "type": "camion",
+            "brand": "Mercedes-Benz",
+            "model": "Atego 1724",
+            "year": 2020,
+            "total_hours": 1850,
+            "status": "disponible",
+            "fuel_capacity": 150,
+            "hourly_cost": 38000,
+            "last_location": {
+                "lat": -33.4487,
+                "lng": -70.6691,
+                "address": "Parcela 5, Sector Este"
+            },
+            "created_at": "2024-01-20T10:00:00Z"
+        }
+    ],
+    "work_orders": [
+        {
+            "id": "OT-2024-001",
+            "client_id": 1,
+            "field_name": "Potrero Norte",
+            "task_type": "Siembra",
+            "description": "Siembra de trigo en Potrero Norte. Aplicación de fertilizante previo.",
+            "priority": "alta",
+            "planned_start_date": "2024-07-15T08:00:00Z",
+            "planned_end_date": "2024-07-18T18:00:00Z",
+            "actual_start_date": "2024-07-15T08:30:00Z",
+            "actual_end_date": null,
+            "status": "en_ejecucion",
+            "assigned_operator": "Juan Pérez",
+            "assigned_machinery": [
+                1,
+                4
+            ],
+            "target_hectares": 25,
+            "target_hours": 32,
+            "actual_hectares": 15,
+            "actual_hours": 18,
+            "progress_percentage": 60,
+            "created_at": "2024-07-10T10:00:00Z",
+            "updated_at": "2024-07-16T14:30:00Z"
+        },
+        {
+            "id": "OT-2024-002",
+            "client_id": 2,
+            "field_name": "Parcela A",
+            "task_type": "Cosecha",
+            "description": "Cosecha de maíz en Parcela A. Transporte a silo principal.",
+            "priority": "critica",
+            "planned_start_date": "2024-08-20T07:00:00Z",
+            "planned_end_date": "2024-08-22T20:00:00Z",
+            "actual_start_date": null,
+            "actual_end_date": null,
+            "status": "planificada",
+            "assigned_operator": "Carlos Rodríguez",
+            "assigned_machinery": [
+                3,
+                5
+            ],
+            "target_hectares": 30,
+            "target_hours": 40,
+            "actual_hectares": 0,
+            "actual_hours": 0,
+            "progress_percentage": 0,
+            "created_at": "2024-08-12T10:00:00Z",
+            "updated_at": "2024-08-12T10:00:00Z"
+        },
+        {
+            "id": "OT-2024-003",
+            "client_id": 1,
+            "field_name": "Lote 5",
+            "task_type": "Pulverización",
+            "description": "Aplicación de herbicida post-emergencia en Lote 5.",
+            "priority": "media",
+            "planned_start_date": "2024-06-14T09:00:00Z",
+            "planned_end_date": "2024-06-14T17:00:00Z",
+            "actual_start_date": "2024-06-14T09:15:00Z",
+            "actual_end_date": "2024-06-14T16:45:00Z",
+            "status": "completada",
+            "assigned_operator": "María González",
+            "assigned_machinery": [
+                2
+            ],
+            "target_hectares": 18,
+            "target_hours": 8,
+            "actual_hectares": 18,
+            "actual_hours": 7.5,
+            "progress_percentage": 100,
+            "created_at": "2024-06-08T10:00:00Z",
+            "updated_at": "2024-06-14T16:45:00Z"
+        }
+    ],
+    "maintenances": [
+        {
+            "id": 1,
+            "machinery_id": 1,
+            "machinery_code": "TR-001",
+            "type": "preventiva",
+            "status": "programada",
+            "scheduled_date": "2024-09-15T08:00:00Z",
+            "completion_date": null,
+            "description": "Mantenimiento preventivo 2500 horas. Cambio de aceite y filtros.",
+            "cost": 150000,
+            "items": [
+                {
+                    "id": "MI-001",
+                    "name": "Cambio de aceite motor",
+                    "description": "Cambio de aceite del motor principal",
+                    "type": "cambio_aceite",
+                    "cost": 50000,
+                    "estimated_hours": 2,
+                    "status": "pendiente",
+                    "notes": "Aceite 15W-40",
+                    "parts_required": [
+                        "Aceite Motor 15W40",
+                        "Filtro de Aceite"
+                    ],
+                    "priority": "alta",
+                    "scheduled_date": "2024-09-15"
+                },
+                {
+                    "id": "MI-002",
+                    "name": "Cambio de filtros",
+                    "description": "Reemplazo de filtros de aire y combustible",
+                    "type": "cambio_filtros",
+                    "cost": 60000,
+                    "estimated_hours": 1,
+                    "status": "pendiente",
+                    "notes": "Filtros estándar",
+                    "parts_required": [
+                        "Filtro de Aire",
+                        "Filtro de Combustible"
+                    ],
+                    "priority": "media",
+                    "scheduled_date": "2024-09-15"
+                }
+            ],
+            "parts_used": [],
+            "technician": "Carlos Méndez",
+            "odometer_hours": 2450,
+            "created_at": "2024-09-01T10:00:00Z"
+        },
+        {
+            "id": 2,
+            "machinery_id": 1,
+            "machinery_code": "TR-001",
+            "type": "correctiva",
+            "status": "completada",
+            "scheduled_date": "2024-07-20T08:00:00Z",
+            "completion_date": "2024-07-22T16:00:00Z",
+            "description": "Reparación del sistema hidráulico. Fuga detectada en válvula principal.",
+            "cost": 350000,
+            "items": [
+                {
+                    "id": "MI-003",
+                    "name": "Reparación de fuga hidráulica",
+                    "description": "Reparación de fuga en válvula principal",
+                    "type": "otro",
+                    "cost": 250000,
+                    "estimated_hours": 4,
+                    "actual_hours": 5,
+                    "status": "completado",
+                    "notes": "Válvula reemplazada",
+                    "parts_required": [
+                        "Válvula Hidráulica",
+                        "Sellos"
+                    ],
+                    "priority": "critica",
+                    "scheduled_date": "2024-07-20",
+                    "completed_date": "2024-07-22",
+                    "assigned_technician": "Roberto Silva"
+                }
+            ],
+            "parts_used": [
+                {
+                    "part": "Válvula Hidráulica",
+                    "quantity": 1
+                },
+                {
+                    "part": "Sellos",
+                    "quantity": 1
+                }
+            ],
+            "technician": "Roberto Silva",
+            "odometer_hours": 2450,
+            "created_at": "2024-09-05T10:00:00Z"
+        }
+    ],
+    "fuel_loads": [
+        {
+            "id": 1,
+            "machinery_id": 1,
+            "machinery_code": "TR-001",
+            "operator_id": "OP-001",
+            "operator": "Juan Pérez",
+            "date": "2024-07-15T08:00:00Z",
+            "liters": 150,
+            "cost_per_liter": 1280,
+            "total_cost": 192000,
+            "work_order_id": "OT-2024-001",
+            "source": "bodega",
+            "location": "Base FUTAMAQ, Valdivia",
+            "created_at": "2024-07-15T08:00:00Z"
+        },
+        {
+            "id": 2,
+            "machinery_id": 2,
+            "machinery_code": "TR-002",
+            "operator_id": "OP-002",
+            "operator": "María González",
+            "date": "2024-07-14T09:00:00Z",
+            "liters": 120,
+            "cost_per_liter": 1300,
+            "total_cost": 156000,
+            "work_order_id": "OT-2024-003",
+            "source": "bodega",
+            "location": "Parcela 8, Sector Sur",
+            "created_at": "2024-07-14T09:00:00Z"
+        }
+    ],
+    "spare_parts": [
+        {
+            "id": 1,
+            "description": "Aceite Motor 15W40",
+            "category": "Lubricantes",
+            "current_stock": 45,
+            "minimum_stock": 20,
+            "unit_cost": 8500,
+            "supplier": "Distribuidora Lubricantes SA",
+            "machinery_id": null,
+            "machinery_brand": null,
+            "machinery_model": null,
+            "created_at": "2024-01-10T10:00:00Z"
+        },
+        {
+            "id": 2,
+            "description": "Filtro de Aceite - John Deere",
+            "category": "Filtros",
+            "current_stock": 8,
+            "minimum_stock": 10,
+            "unit_cost": 12000,
+            "supplier": "Repuestos Agrícolas Ltda.",
+            "machinery_id": 1,
+            "machinery_brand": "John Deere",
+            "machinery_model": "6120M",
+            "created_at": "2024-01-10T10:00:00Z"
+        }
+    ],
+    "part_movements": [
+        {
+            "id": 1,
+            "part_id": 2,
+            "part_description": "Filtro de Aceite - John Deere",
+            "movement_type": "entrada",
+            "quantity": 15,
+            "reason": "Compra de proveedor",
+            "work_order_id": null,
+            "operator": "Juan Pérez",
+            "date": "2024-05-15",
+            "created_at": "2024-05-15T10:00:00Z"
+        },
+        {
+            "id": 2,
+            "part_id": 2,
+            "part_description": "Filtro de Aceite - John Deere",
+            "movement_type": "salida",
+            "quantity": 7,
+            "reason": "Mantenimiento preventivo",
+            "work_order_id": null,
+            "operator": "Carlos Rodríguez",
+            "date": "2024-06-18",
+            "created_at": "2024-06-18T14:30:00Z"
+        }
+    ]
+}

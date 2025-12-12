@@ -1,0 +1,95 @@
+<svg width="120" height="60" viewBox="0 0 120 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo del logo -->
+  <rect width="120" height="60" fill="#1a1a1a" rx="8"/>
+  
+  <!-- Tractor -->
+  <g transform="translate(20, 15)">
+    <!-- Cuerpo del tractor -->
+    <rect x="8" y="12" width="25" height="8" fill="#4a9eff" stroke="#6bb6ff" stroke-width="0.5"/>
+    <!-- Cabina -->
+    <rect x="10" y="8" width="12" height="12" fill="#4a9eff" stroke="#6bb6ff" stroke-width="0.5"/>
+    <!-- Volante -->
+    <circle cx="16" cy="14" r="3" fill="none" stroke="#6bb6ff" stroke-width="1"/>
+    <!-- Rueda trasera -->
+    <circle cx="28" cy="22" r="6" fill="#4a9eff" stroke="#6bb6ff" stroke-width="0.5"/>
+    <circle cx="28" cy="22" r="3" fill="white"/>
+    <!-- Rueda delantera -->
+    <circle cx="12" cy="22" r="4" fill="#4a9eff" stroke="#6bb6ff" stroke-width="0.5"/>
+    <circle cx="12" cy="22" r="2" fill="white"/>
+    <!-- Tubo de escape -->
+    <rect x="30" y="6" width="2" height="8" fill="#4a9eff"/>
+  </g>
+  
+  <!-- Engranaje -->
+  <g transform="translate(35, 10)">
+    <circle cx="15" cy="15" r="12" fill="#8a8a8a" stroke="#a0a0a0" stroke-width="0.5"/>
+    <circle cx="15" cy="15" r="6" fill="#1a1a1a"/>
+    <!-- Dientes del engranaje -->
+    <rect x="13" y="3" width="4" height="6" fill="#8a8a8a"/>
+    <rect x="13" y="21" width="4" height="6" fill="#8a8a8a"/>
+    <rect x="3" y="13" width="6" height="4" fill="#8a8a8a"/>
+    <rect x="21" y="13" width="6" height="4" fill="#8a8a8a"/>
+    <rect x="6" y="6" width="3" height="3" fill="#8a8a8a" transform="rotate(45 7.5 7.5)"/>
+    <rect x="21" y="6" width="3" height="3" fill="#8a8a8a" transform="rotate(45 22.5 7.5)"/>
+    <rect x="6" y="21" width="3" height="3" fill="#8a8a8a" transform="rotate(45 7.5 22.5)"/>
+    <rect x="21" y="21" width="3" height="3" fill="#8a8a8a" transform="rotate(45 22.5 22.5)"/>
+  </g>
+  
+  <!-- Hojas -->
+  <g transform="translate(15, 25)">
+    <!-- Hoja izquierda -->
+    <path d="M5 15 Q0 10 5 5 Q10 0 15 5 Q20 10 15 15 Q10 20 5 15" fill="#4ade80" stroke="#6ee7b7" stroke-width="0.5"/>
+    <!-- Hoja derecha -->
+    <path d="M8 18 Q3 13 8 8 Q13 3 18 8 Q23 13 18 18 Q13 23 8 18" fill="#4ade80" stroke="#6ee7b7" stroke-width="0.5"/>
+    <!-- Venas de las hojas -->
+    <path d="M10 15 Q10 10 10 5" stroke="#6ee7b7" stroke-width="0.5" fill="none"/>
+    <path d="M13 18 Q13 13 13 8" stroke="#6ee7b7" stroke-width="0.5" fill="none"/>
+  </g>
+  
+  <!-- Texto FUTAMAQ -->
+  <text x="60" y="45" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#404040" text-anchor="middle">FUTAMAQ</text>
+</svg>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

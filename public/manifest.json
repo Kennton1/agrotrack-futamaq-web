@@ -1,0 +1,101 @@
+{
+  "name": "AgroTrack FUTAMAQ - Sistema de Gestión Agrícola",
+  "short_name": "AgroTrack FUTAMAQ",
+  "description": "Sistema integral de gestión de maquinaria agrícola, órdenes de trabajo y mantenimientos para FUTAMAQ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#22c55e",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/logo-futamaq.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver el dashboard principal",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/logo-futamaq.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Maquinarias",
+      "short_name": "Maquinarias",
+      "description": "Gestionar maquinarias",
+      "url": "/maquinarias",
+      "icons": [
+        {
+          "src": "/logo-futamaq.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Órdenes de Trabajo",
+      "short_name": "Órdenes",
+      "description": "Gestionar órdenes de trabajo",
+      "url": "/ordenes-trabajo",
+      "icons": [
+        {
+          "src": "/logo-futamaq.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Reportes",
+      "short_name": "Reportes",
+      "description": "Ver reportes y análisis",
+      "url": "/reportes",
+      "icons": [
+        {
+          "src": "/logo-futamaq.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}
+
+
+
+
+
+
+
+
+
+
+
+
