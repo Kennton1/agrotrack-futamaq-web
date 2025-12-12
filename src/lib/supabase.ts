@@ -3,7 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+// Debug de variables (Solo para troubleshooting, borrar después)
+if (typeof window !== 'undefined') {
+  console.log('--- SUPABASE DEBUG ---')
+  console.log('URL:', supabaseUrl)
+  console.log('KEY (Primeros 10 caracteres):', supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'MISSING')
+  console.log('KEY Length:', supabaseAnonKey ? supabaseAnonKey.length : 0)
+  console.log('----------------------')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export type Database = {
   public: {
