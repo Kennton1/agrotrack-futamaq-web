@@ -643,11 +643,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addWorkOrder = async (newWorkOrder: Omit<WorkOrder, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       if (supabase) {
-        // ID generation strategy: The Supabase schema expects a string ID.
-        // The mock data uses 'OT-...' format. We can let the user provide it or generate it.
-        // Implementation: Generate OT-Timestamp if not provided (though Omit says no ID).
+        // Generar ID único
         const id = `OT-${Date.now()}`
-        const workOrderData = { ...newWorkOrder, id }
+
+        // Limpiar el objeto de valores nulos o indefinidos que podrían causar problemas
+        // y asegurar que campos opcionales sean manejados correctamente
+        const workOrderData = {
+          id,
+          client_id: newWorkOrder.client_id,
+          field_name: newWorkOrder.field_name,
+          task_type: newWorkOrder.task_type,
+          description: newWorkOrder.description,
+          priority: newWorkOrder.priority,
+          planned_start_date: newWorkOrder.planned_start_date,
+          planned_end_date: newWorkOrder.planned_end_date,
+          status: newWorkOrder.status,
+          assigned_machinery: newWorkOrder.assigned_machinery || [],
+          target_hectares: newWorkOrder.target_hectares || 0,
+          // Campos opcionales: solo incluirlos si tienen valor
+          ...(newWorkOrder.assigned_operator ? { assigned_operator: newWorkOrder.assigned_operator } : { assigned_operator: null }),
+          ...(newWorkOrder.actual_start_date ? { actual_start_date: newWorkOrder.actual_start_date } : {}),
+          ...(newWorkOrder.actual_end_date ? { actual_end_date: newWorkOrder.actual_end_date } : {}),
+          target_hours: newWorkOrder.target_hours || 0,
+          actual_hectares: newWorkOrder.actual_hectares || 0,
+          actual_hours: newWorkOrder.actual_hours || 0,
+          progress_percentage: newWorkOrder.progress_percentage || 0
+        }
+
+        console.log('Enviando orden a Supabase:', workOrderData)
 
         const { data, error } = await supabase
           .from('work_orders')
@@ -655,7 +678,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .select()
           .single()
 
-        if (error) throw error
+        if (error) {
+          console.error('Detalles del error Supabase:', error)
+          throw error
+        }
+
         setWorkOrders(prev => [...prev, data as WorkOrder])
         toast.success('Orden de trabajo creada exitosamente')
       } else {
@@ -671,7 +698,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       console.error('Error adding work order:', error)
-      toast.error('Error al crear orden: ' + error.message)
+      // Mostrar mensaje más detallado si está disponible
+      const errorMessage = error.details || error.message || 'Error desconocido'
+      const errorHint = error.hint ? ` (${error.hint})` : ''
+      toast.error(`Error al crear orden: ${errorMessage}${errorHint}`)
     }
   }
 
