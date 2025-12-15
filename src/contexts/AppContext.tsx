@@ -620,8 +620,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return null
     try {
       // Decode base64
-      const base64Content = base64Data.split(',')[1]
-      const mimeType = base64Data.split(';')[0].split(':')[1]
+      const parts = base64Data.split(',')
+      if (parts.length < 2) throw new Error('Invalid base64 data')
+
+      const base64Content = parts[1]
+      const mimeMatch = base64Data.match(/^data:(.*?);base64/)
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg'
 
       const byteCharacters = atob(base64Content)
       const byteNumbers = new Array(byteCharacters.length)
@@ -631,6 +635,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const byteArray = new Uint8Array(byteNumbers)
       const blob = new Blob([byteArray], { type: mimeType })
 
+      console.log(`Uploading image to ${path}:`, { mimeType, size: blob.size })
+
       const { data, error } = await supabase.storage
         .from('images')
         .upload(path, blob, {
@@ -638,15 +644,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           upsert: true
         })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase Storage Error:', error)
+        throw error
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('images')
         .getPublicUrl(path)
 
       return publicUrl
-    } catch (error) {
-      console.error('Error uploading image:', error)
+    } catch (error: any) {
+      console.error('Error uploading image to Supabase:', error)
       return null
     }
   }
@@ -660,16 +669,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (processedImages.length > 0) {
           const toastId = toast.loading('Subiendo imágenes...')
 
-          processedImages = await Promise.all(processedImages.map(async (img) => {
+          const uploadPromises = processedImages.map(async (img) => {
             if (img.url.startsWith('data:')) {
               const fileName = `machinery/${Date.now()}_${img.id.replace(/[^a-zA-Z0-9-_]/g, '')}.${img.url.split(';')[0].split('/')[1]}`
               const publicUrl = await uploadImageToSupabase(img.url, fileName)
               if (publicUrl) {
                 return { ...img, url: publicUrl }
               }
+              // Si falla la subida, retornamos null para filtrarlo después
+              return null
             }
             return img
-          }))
+          })
+
+          const results = await Promise.all(uploadPromises)
+          processedImages = results.filter((img): img is MachineryImage => img !== null)
 
           toast.dismiss(toastId)
         }
@@ -717,7 +731,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (hasNewImages) {
             const toastId = toast.loading('Subiendo nuevas imágenes...')
 
-            processedImages = await Promise.all(processedImages.map(async (img) => {
+            const uploadPromises = processedImages.map(async (img) => {
               if (img.url.startsWith('data:')) {
                 // Generate filename: machinery/TIMESTAMP_ID.EXT
                 const match = img.url.match(/^data:(image\/[a-z]+);base64,/)
@@ -729,9 +743,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 if (publicUrl) {
                   return { ...img, url: publicUrl }
                 }
+                return null
               }
               return img
-            }))
+            })
+
+            const results = await Promise.all(uploadPromises)
+            processedImages = results.filter((img): img is MachineryImage => img !== null)
 
             toast.dismiss(toastId)
           }
