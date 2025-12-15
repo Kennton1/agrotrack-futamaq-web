@@ -673,8 +673,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })
 
       if (error) {
-        console.error('Supabase Storage Error:', error)
-        throw error
+        console.warn('Supabase Client Upload failed, attempting fetch fallback...', error)
+        // Fallback via simple FETCH
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+        const url = `${supabaseUrl}/storage/v1/object/images/${path}`
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'apikey': supabaseAnonKey || '',
+            'Content-Type': mimeType,
+            'x-upsert': 'true'
+          },
+          body: blob
+        })
+
+        if (!response.ok) {
+          throw error // Throw original error if fallback also fails
+        }
       }
 
       const { data: { publicUrl } } = supabase.storage
@@ -687,7 +705,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return null
     }
   }
-
   const addMachinery = async (newMachinery: Omit<Machinery, 'id' | 'created_at'>) => {
     try {
       if (supabase) {
