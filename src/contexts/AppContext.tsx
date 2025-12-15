@@ -662,7 +662,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
           processedImages = await Promise.all(processedImages.map(async (img) => {
             if (img.url.startsWith('data:')) {
-              const fileName = `machinery/${Date.now()}_${img.id}.${img.url.split(';')[0].split('/')[1]}`
+              const fileName = `machinery/${Date.now()}_${img.id.replace(/[^a-zA-Z0-9-_]/g, '')}.${img.url.split(';')[0].split('/')[1]}`
               const publicUrl = await uploadImageToSupabase(img.url, fileName)
               if (publicUrl) {
                 return { ...img, url: publicUrl }
@@ -722,7 +722,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 // Generate filename: machinery/TIMESTAMP_ID.EXT
                 const match = img.url.match(/^data:(image\/[a-z]+);base64,/)
                 const ext = match ? match[1].split('/')[1] : 'jpg'
-                const fileName = `machinery/${Date.now()}_${img.id}.${ext}`
+                const safeId = img.id.replace(/[^a-zA-Z0-9-_]/g, '')
+                const fileName = `machinery/${Date.now()}_${safeId}.${ext}`
 
                 const publicUrl = await uploadImageToSupabase(img.url, fileName)
                 if (publicUrl) {
