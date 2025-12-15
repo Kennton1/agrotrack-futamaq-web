@@ -681,6 +681,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const url = `${supabaseUrl}/storage/v1/object/images/${path}`
         const response = await fetch(url, {
           method: 'POST',
+          credentials: 'omit', // CRITICAL: Skip corrupt cookies
           headers: {
             'Authorization': `Bearer ${supabaseAnonKey}`,
             'apikey': supabaseAnonKey || '',
