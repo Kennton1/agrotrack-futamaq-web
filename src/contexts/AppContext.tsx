@@ -412,7 +412,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         // --- SYNC AUTH USER TO PUBLIC USERS ---
         // Verificar si el usuario actual autenticado existe en la tabla pública users
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+        // Safety check: If session/token is causing 431 errors, sign out
+        if (sessionError && sessionError.message.includes('431')) {
+          console.warn('431 Error detected, clearing session...')
+          await supabase.auth.signOut()
+          localStorage.clear()
+          window.location.reload()
+          return
+        }
+
+        const session = sessionData?.session
+
         if (session?.user) {
           const publicUser = usersData.find((u: any) => u.email === session.user.email)
 
