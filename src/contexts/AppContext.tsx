@@ -497,8 +497,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .order('date', { ascending: false })
       if (fuelLoadsData) setFuelLoads(fuelLoadsData as FuelLoad[])
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error)
+
+      // Auto-fix for 431 Request Header Fields Too Large
+      if (error?.message?.includes('431') || JSON.stringify(error).includes('431')) {
+        console.warn('⚠️ DETECTADO ERROR 431 - Limpiando sesión corrupta...')
+
+        if (typeof window !== 'undefined') {
+          localStorage.clear()
+          sessionStorage.clear()
+          // Forzar expiración de cookies
+          document.cookie.split(";").forEach(function (c) {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+          });
+
+          setTimeout(() => window.location.reload(), 1000)
+        }
+      }
     }
   }
 
