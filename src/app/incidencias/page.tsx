@@ -1,26 +1,47 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import {
   Plus, Search, Filter, Trash2, Eye, AlertTriangle,
-  X, ChevronLeft, ChevronRight, Clock, User, MapPin, Package
+  X, ChevronLeft, ChevronRight, Clock, User, MapPin, Package, RefreshCw
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useApp, Incident } from '@/contexts/AppContext'
 
 export default function IncidenciasPage() {
-  const { incidents, workOrders, machinery, users, deleteIncident } = useApp()
+  const { incidents, workOrders, machinery, users, deleteIncident, fetchData } = useApp()
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+
+
+  const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const itemsPerPage = 9
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    // Check for deep link to specific incident
+    const incidentId = searchParams.get('id')
+    if (incidentId && incidents.length > 0) {
+      setHighlightedId(incidentId)
+      // Opcional: limpiar el parámetro de la URL
+    }
+  }, [searchParams, incidents])
+
+  useEffect(() => {
+    // Cargar datos al montar el componente para asegurar consistencia
+    fetchData()
+  }, [])
+
 
   useEffect(() => {
     // Simular carga para UX
@@ -61,7 +82,7 @@ export default function IncidenciasPage() {
     const matchesStatus = statusFilter === 'all' || incident.status === statusFilter
 
     return matchesSearch && matchesType && matchesStatus
-  })
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   // Calcular paginación
   const totalPages = Math.ceil(filteredIncidents.length / itemsPerPage)
@@ -144,6 +165,19 @@ export default function IncidenciasPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Incidencias</h1>
           <p className="text-gray-700 dark:text-gray-300">Gestión y seguimiento de incidencias reportadas (Sincronizado)</p>
         </div>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            setIsRefreshing(true)
+            await fetchData()
+            setIsRefreshing(false)
+          }}
+          disabled={isRefreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Actualizar
+        </Button>
       </div>
 
       {/* Estadísticas rápidas */}
@@ -240,9 +274,20 @@ export default function IncidenciasPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {paginatedIncidents.map((incident) => {
             const woInfo = getWorkOrderInfo(incident.work_order_id)
+            const isHighlighted = highlightedId === incident.id.toString()
 
             return (
-              <Card key={incident.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={incident.id}
+                className={`hover:shadow-md transition-shadow cursor-pointer ${isHighlighted ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                onClick={() => {
+                  if (isHighlighted) setHighlightedId(null)
+                  // No abrir modal automáticamente al hacer clic en la tarjeta si solo se está desseleccionando
+                  // Pero el usuario dijo "durara hasta que se seleccione". 
+                  // Si "seleccionar" es hacer clic para ver detalles, entonces:
+                  handleView(incident)
+                }}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -266,7 +311,8 @@ export default function IncidenciasPage() {
                         {getStatusLabel(incident.status)}
                       </Badge>
                     </div>
-                    <div>
+
+                    <div className="grid grid-cols-2 gap-4 text-xs">
                       <p className="text-gray-500">Reportado por</p>
                       <p className="font-medium text-xs truncate">{getReporterName(incident.reporter_id)}</p>
                     </div>

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import {
   Truck, Wrench, ClipboardList, Users, BarChart3,
   Plus, Eye, Edit, Trash2, MapPin, Clock, Fuel, Settings, Package,
-  Activity, Bell, TrendingUp, TrendingDown
+  Activity, Bell, TrendingUp, TrendingDown, RefreshCw
 } from 'lucide-react'
 import { useApp } from '@/contexts/AppContext'
 import { formatCLP, formatHours, formatDate } from '@/lib/utils'
@@ -16,9 +16,18 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { machinery, workOrders, maintenances, spareParts, fuelLoads } = useApp()
+  const { machinery, workOrders, maintenances, spareParts, fuelLoads, fetchData } = useApp()
   const [loading, setLoading] = useState(true)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await fetchData()
+    setLastUpdated(new Date())
+    setTimeout(() => setIsRefreshing(false), 800)
+  }
 
   // Valor por defecto para users ya que no está en AppContext
   // Usando un valor mock basado en los usuarios predefinidos del sistema
@@ -145,19 +154,33 @@ export default function DashboardPage() {
             <h1 className="text-4xl font-bold text-gradient dark:text-white mb-2">Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-400 text-lg">Resumen general del sistema FUTAMAQ</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Última actualización</p>
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Hace 5 minutos</p>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Última actualización</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                {lastUpdated.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+              </p>
             </div>
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className={`rounded-full shadow-sm border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 !p-0 !w-8 ${isRefreshing ? 'animate-spin text-blue-500' : 'text-gray-500 dark:text-gray-400'}`}
+              title="Actualizar datos"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
 
       {/* KPIs mejorados */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card variant="modern" className="group bg-gradient-to-br from-primary-50 via-primary-100/50 to-secondary-50/30 border-primary-200/50 dark:bg-gray-800 dark:border-gray-700">
+        <Card
+          onClick={() => router.push('/maquinarias')}
+          variant="modern"
+          className="group bg-gradient-to-br from-primary-50 via-primary-100/50 to-secondary-50/30 border-primary-200/50 dark:bg-gray-800 dark:border-gray-700 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl"
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -174,7 +197,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card variant="modern" className="group bg-gradient-to-br from-success-50 via-success-100/50 to-primary-50/30 border-success-200/50 dark:bg-gray-800 dark:border-gray-700">
+        <Card
+          onClick={() => router.push('/ordenes-trabajo')}
+          variant="modern"
+          className="group bg-gradient-to-br from-success-50 via-success-100/50 to-primary-50/30 border-success-200/50 dark:bg-gray-800 dark:border-gray-700 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl"
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -193,7 +220,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card variant="modern" className="group bg-gradient-to-br from-warning-50 via-warning-100/50 to-orange-50/30 border-warning-200/50 dark:bg-gray-800 dark:border-gray-700">
+        <Card
+          onClick={() => router.push('/mantenimientos')}
+          variant="modern"
+          className="group bg-gradient-to-br from-warning-50 via-warning-100/50 to-orange-50/30 border-warning-200/50 dark:bg-gray-800 dark:border-gray-700 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl"
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -210,7 +241,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card variant="modern" className="group bg-gradient-to-br from-secondary-50 via-secondary-100/50 to-info-50/30 border-secondary-200/50 dark:bg-gray-800 dark:border-gray-700">
+        <Card
+          onClick={() => router.push('/usuarios')}
+          variant="modern"
+          className="group bg-gradient-to-br from-secondary-50 via-secondary-100/50 to-info-50/30 border-secondary-200/50 dark:bg-gray-800 dark:border-gray-700 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl"
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -359,18 +394,20 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
               {/* Mantenimientos (Vehículos) */}
-              <div className="bg-red-100/80 dark:bg-gray-700/90 border border-red-200/50 dark:border-gray-600/50 rounded-2xl p-5">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="p-3 bg-red-500 dark:bg-red-600 rounded-xl shadow-lg">
-                    <Wrench className="h-5 w-5 text-white" />
+              <div className="bg-red-100/80 dark:bg-gray-700/90 border border-red-200/50 dark:border-gray-600/50 rounded-2xl p-5 h-full flex flex-col justify-between items-center text-center">
+                <div className="w-full flex flex-col items-center">
+                  <div className="p-3 bg-red-500 dark:bg-red-600 rounded-xl shadow-lg mb-3">
+                    <Wrench className="h-6 w-6 text-white" />
                   </div>
-                  <div>
+                  <div className="mb-2">
                     <h3 className="font-bold text-red-700 dark:text-red-300">Mantenimientos</h3>
-                    <p className="text-xs text-red-600 dark:text-red-400">(Vehículos)</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium">(Vehículos)</p>
                   </div>
+                  <div className="text-3xl font-bold text-red-700 dark:text-red-300 mb-1">
+                    {maintenances.filter(m => m.status !== 'completada').length}
+                  </div>
+                  <p className="text-sm text-red-600 dark:text-red-400 mb-6">Requieren atención</p>
                 </div>
-                <div className="text-3xl font-bold text-red-700 dark:text-red-300 mb-2">2</div>
-                <p className="text-sm text-red-600 dark:text-red-400 mb-3">Requieren atención</p>
                 <Button
                   size="sm"
                   variant="outline"
@@ -382,69 +419,93 @@ export default function DashboardPage() {
               </div>
 
               {/* Órdenes Retrasadas */}
-              <div className="bg-yellow-100/80 dark:bg-gray-700/90 border border-yellow-200/50 dark:border-gray-600/50 rounded-2xl p-5">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="p-3 bg-yellow-500 dark:bg-yellow-600 rounded-xl shadow-lg">
-                    <ClipboardList className="h-5 w-5 text-white" />
+              <div className="bg-yellow-100/80 dark:bg-gray-700/90 border border-yellow-200/50 dark:border-gray-600/50 rounded-2xl p-5 h-full flex flex-col justify-between items-center text-center">
+                <div className="w-full flex flex-col items-center">
+                  <div className="p-3 bg-yellow-500 dark:bg-yellow-600 rounded-xl shadow-lg mb-3">
+                    <ClipboardList className="h-6 w-6 text-white" />
                   </div>
-                  <div>
+                  <div className="mb-2">
                     <h3 className="font-bold text-yellow-700 dark:text-yellow-300">Órdenes</h3>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400">Atrasadas</p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Atrasadas</p>
                   </div>
+                  <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-300 mb-1">
+                    {workOrders.filter(wo => wo.status === 'retrasada').length}
+                  </div>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-6">Fuera de cronograma</p>
                 </div>
-                <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-300 mb-2">1</div>
-                <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-3">Fuera de cronograma</p>
                 <Button
                   size="sm"
                   variant="outline"
                   className="w-full border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-center !transform-none !scale-100"
-                  onClick={() => router.push('/ordenes-trabajo')}
+                  onClick={() => router.push('/ordenes-trabajo?status=retrasada')}
                 >
                   Revisar
                 </Button>
               </div>
 
               {/* Repuestos (Stock Bajo) */}
-              <div className="bg-purple-100/80 dark:bg-gray-700/90 border border-purple-200/50 dark:border-gray-600/50 rounded-2xl p-5">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="p-3 bg-purple-500 dark:bg-purple-600 rounded-xl shadow-lg">
-                    <Package className="h-5 w-5 text-white" />
+              <div className="bg-purple-100/80 dark:bg-gray-700/90 border border-purple-200/50 dark:border-gray-600/50 rounded-2xl p-5 h-full flex flex-col justify-between items-center text-center">
+                <div className="w-full flex flex-col items-center">
+                  <div className="p-3 bg-purple-500 dark:bg-purple-600 rounded-xl shadow-lg mb-3">
+                    <Package className="h-6 w-6 text-white" />
                   </div>
-                  <div>
+                  <div className="mb-2">
                     <h3 className="font-bold text-purple-700 dark:text-purple-300">Repuestos</h3>
-                    <p className="text-xs text-purple-600 dark:text-purple-400">(Stock Bajo)</p>
+                    <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">(Stock Bajo)</p>
                   </div>
+                  <div className="text-3xl font-bold text-purple-700 dark:text-purple-300 mb-1">
+                    {spareParts.filter(sp => sp.current_stock <= sp.minimum_stock).length}
+                  </div>
+                  <p className="text-sm text-purple-600 dark:text-purple-400 mb-6">Necesitan reposición</p>
                 </div>
-                <div className="text-3xl font-bold text-purple-700 dark:text-purple-300 mb-2">3</div>
-                <p className="text-sm text-purple-600 dark:text-purple-400 mb-3">Necesitan reposición</p>
                 <Button
                   size="sm"
                   variant="outline"
                   className="w-full border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-center !transform-none !scale-100"
-                  onClick={() => router.push('/repuestos')}
+                  onClick={() => router.push('/repuestos?filter=low')}
                 >
                   Gestionar
                 </Button>
               </div>
 
               {/* Próximos (Esta Semana) */}
-              <div className="bg-blue-100/80 dark:bg-gray-700/90 border border-blue-200/50 dark:border-gray-600/50 rounded-2xl p-5">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="p-3 bg-blue-500 dark:bg-blue-600 rounded-xl shadow-lg">
-                    <Clock className="h-5 w-5 text-white" />
+              <div className="bg-blue-100/80 dark:bg-gray-700/90 border border-blue-200/50 dark:border-gray-600/50 rounded-2xl p-5 h-full flex flex-col justify-between items-center text-center">
+                <div className="w-full flex flex-col items-center">
+                  <div className="p-3 bg-blue-500 dark:bg-blue-600 rounded-xl shadow-lg mb-3">
+                    <Clock className="h-6 w-6 text-white" />
                   </div>
-                  <div>
+                  <div className="mb-2">
                     <h3 className="font-bold text-blue-700 dark:text-blue-300">Próximos</h3>
-                    <p className="text-xs text-blue-600 dark:text-blue-400">(Esta Semana)</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">(Esta Semana)</p>
                   </div>
+                  <div className="text-3xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                    {/* Suma de mantenimientos y órdenes para los próximos 7 días */}
+                    {
+                      (() => {
+                        const now = new Date()
+                        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+                        const upcomingMaint = maintenances.filter(m => {
+                          const d = new Date(m.scheduled_date)
+                          return d >= now && d <= nextWeek && m.status !== 'completada'
+                        }).length
+
+                        const upcomingOrders = workOrders.filter(wo => {
+                          const d = new Date(wo.planned_start_date)
+                          return d >= now && d <= nextWeek && wo.status === 'planificada'
+                        }).length
+
+                        return upcomingMaint + upcomingOrders
+                      })()
+                    }
+                  </div>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mb-6">Programados</p>
                 </div>
-                <div className="text-3xl font-bold text-blue-700 dark:text-blue-300 mb-2">5</div>
-                <p className="text-sm text-blue-600 dark:text-blue-400 mb-3">Programados</p>
                 <Button
                   size="sm"
                   variant="outline"
                   className="w-full border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-center !transform-none !scale-100"
-                  onClick={() => router.push('/mantenimientos')}
+                  onClick={() => router.push('/ordenes-trabajo?status=planificada')}
                 >
                   Planificar
                 </Button>
@@ -524,18 +585,13 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-6 chart-container">
-            <div className="h-80 chart-area" style={{ backgroundColor: isDarkMode ? '#15202B' : undefined }}>
+            <div className="h-80 chart-area">
               <ResponsiveContainer
                 width="100%"
                 height="100%"
-                style={{
-                  backgroundColor: isDarkMode ? '#15202B' : undefined,
-                  background: isDarkMode ? '#15202B' : undefined
-                }}
               >
                 <BarChart
                   data={maintenanceCostsData}
-                  style={{ background: isDarkMode ? '#15202B' : 'transparent', backgroundColor: isDarkMode ? '#15202B' : 'transparent' }}
                   margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
@@ -552,6 +608,7 @@ export default function DashboardPage() {
                     tickFormatter={(value) => formatCLP(typeof value === 'number' ? value : Number(value))}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload, label }) => {
                       if (!active || !payload || !payload.length) return null
                       const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -623,18 +680,13 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-6 chart-container">
-            <div className="h-80 chart-area" style={{ backgroundColor: isDarkMode ? '#15202B' : undefined }}>
+            <div className="h-80 chart-area">
               <ResponsiveContainer
                 width="100%"
                 height="100%"
-                style={{
-                  backgroundColor: isDarkMode ? '#15202B' : undefined,
-                  background: isDarkMode ? '#15202B' : undefined
-                }}
               >
                 <LineChart
                   data={fuelConsumptionData}
-                  style={{ background: isDarkMode ? '#15202B' : 'transparent', backgroundColor: isDarkMode ? '#15202B' : 'transparent' }}
                   margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
@@ -651,6 +703,7 @@ export default function DashboardPage() {
                     tickFormatter={(value) => `${value}L`}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload, label }) => {
                       if (!active || !payload || !payload.length) return null
                       const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'

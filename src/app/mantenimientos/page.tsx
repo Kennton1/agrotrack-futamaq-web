@@ -214,7 +214,7 @@ export default function MantenimientosPage() {
       }
 
       return matchesSearch && matchesType && matchesStatus
-    })
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   }, [maintenances, searchTerm, typeFilter, statusFilter])
 
   // Calcular totalizaciones por máquina
@@ -774,6 +774,7 @@ export default function MantenimientosPage() {
                     tick={{ fill: isDarkMode ? "#9CA3AF" : "#64748b" }}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload, label }) => (
                       <CustomTooltip
                         active={active}
@@ -814,6 +815,7 @@ export default function MantenimientosPage() {
                     tick={{ fill: isDarkMode ? "#9CA3AF" : "#64748b" }}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload, label }) => (
                       <CustomTooltip
                         active={active}
@@ -886,6 +888,7 @@ export default function MantenimientosPage() {
                     tick={{ fill: isDarkMode ? "#9CA3AF" : "#64748b" }}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload, label }) => (
                       <CustomTooltip
                         active={active}

@@ -50,12 +50,15 @@ interface PartMovement {
   created_at: string
 }
 
+import { useSearchParams } from 'next/navigation'
+
 export default function RepuestosPage() {
+  const searchParams = useSearchParams()
   const { spareParts, deleteSparePart, updateSparePart, machinery, partMovements, deletePartMovement, workOrders } = useApp()
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [stockFilter, setStockFilter] = useState<string>('all')
+  const [stockFilter, setStockFilter] = useState<string>(searchParams.get('filter') === 'low' ? 'low' : 'all')
   const [machineryFilter, setMachineryFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'inventory' | 'movements'>('inventory')
   const [selectedSparePart, setSelectedSparePart] = useState<any>(null)

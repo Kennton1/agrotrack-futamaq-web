@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Home, ClipboardList, Truck, Wrench, Fuel, Package,
-  BarChart3, Bell, Search, Menu, X, LogOut, Activity, User, Edit3, ChevronDown, Settings, Users, AlertTriangle, CheckCheck, Trash2, Moon, Sun
+  BarChart3, Bell, Search, Menu, X, LogOut, Activity, User, Edit3, ChevronDown, Settings, Users, AlertTriangle, CheckCheck, Trash2, Moon, Sun, Briefcase, Layers, PieChart, Shield, Tractor
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -14,16 +14,49 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 import { Logo } from './Logo'
 
-const navigation = [
-  { name: 'Inicio', href: '/dashboard', icon: Home },
-  { name: 'Órdenes de Trabajo', href: '/ordenes-trabajo', icon: ClipboardList },
-  { name: 'Maquinarias', href: '/maquinarias', icon: Truck },
-  { name: 'Mantenimientos', href: '/mantenimientos', icon: Wrench },
-  { name: 'Combustible', href: '/combustible', icon: Fuel },
-  { name: 'Repuestos', href: '/repuestos', icon: Package },
-  { name: 'Reportes', href: '/reportes', icon: BarChart3 },
-  { name: 'Análisis', href: '/analisis', icon: Activity },
-  { name: 'Incidencias', href: '/incidencias', icon: AlertTriangle },
+const navigationGroups = [
+  {
+    title: 'OPERACIÓN',
+    icon: Briefcase,
+    items: [
+      { name: 'Inicio', href: '/dashboard', icon: Home },
+      { name: 'Órdenes de Trabajo', href: '/ordenes-trabajo', icon: ClipboardList },
+      { name: 'Incidencias', href: '/incidencias', icon: AlertTriangle },
+    ]
+  },
+  {
+    title: 'FLOTA',
+    icon: Tractor,
+    items: [
+      { name: 'Maquinarias', href: '/maquinarias', icon: Tractor },
+      { name: 'Mantenimientos', href: '/mantenimientos', icon: Wrench },
+      { name: 'Combustible', href: '/combustible', icon: Fuel },
+    ]
+  },
+  {
+    title: 'INVENTARIO',
+    icon: Layers,
+    items: [
+      { name: 'Repuestos', href: '/repuestos', icon: Package },
+    ]
+  },
+  {
+    title: 'ANÁLISIS',
+    icon: PieChart,
+    items: [
+      { name: 'Reportes', href: '/reportes', icon: BarChart3 },
+      { name: 'Análisis', href: '/analisis', icon: Activity },
+    ]
+  },
+  {
+    title: 'ADMINISTRACIÓN',
+    icon: Shield,
+    items: [
+      { name: 'Usuarios', href: '/usuarios', icon: Users },
+      { name: 'Notificaciones', href: '/notificaciones', icon: Bell },
+      { name: 'Configuración', href: '/configuracion', icon: Settings },
+    ]
+  }
 ]
 
 interface NewAppLayoutProps {
@@ -513,24 +546,6 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
                           <span className="font-medium">Editar Perfil</span>
                         </button>
                       </Link>
-                      <Link href="/configuracion" className="block">
-                        <button
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary-700 dark:hover:text-white flex items-center space-x-3 transition-all duration-300 rounded-lg mx-2"
-                        >
-                          <Settings className="h-4 w-4" />
-                          <span className="font-medium">Configuración</span>
-                        </button>
-                      </Link>
-                      <Link href="/gestion-usuarios" className="block">
-                        <button
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary-700 dark:hover:text-white flex items-center space-x-3 transition-all duration-300 rounded-lg mx-2"
-                        >
-                          <Users className="h-4 w-4" />
-                          <span className="font-medium">Gestionar Usuarios</span>
-                        </button>
-                      </Link>
                     </div>
 
                     {/* Toggle de tema */}
@@ -589,7 +604,7 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
               <X className="h-6 w-6 text-white" />
             </button>
           </div>
-          <SidebarContent navigation={navigation} pathname={pathname} />
+          <SidebarContent navigationGroups={navigationGroups} pathname={pathname} />
         </div>
       </div>
 
@@ -608,7 +623,7 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
                 <X className="h-5 w-5 text-gray-600" />
               </button>
             </div>
-            <SidebarContent navigation={navigation} pathname={pathname} />
+            <SidebarContent navigationGroups={navigationGroups} pathname={pathname} />
           </div>
         </div>
 
@@ -633,37 +648,49 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
 }
 
 function SidebarContent({
-  navigation,
+  navigationGroups,
   pathname
 }: {
-  navigation: any[],
+  navigationGroups: any[],
   pathname: string
 }) {
   return (
-    <div className="sidebar">
+    <div className="sidebar h-full flex flex-col">
       {/* Navegación mejorada */}
-      <nav className="flex-1 px-4 py-6 space-y-2 pt-8">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`sidebar__item ${isActive
-                ? 'sidebar__item--active'
-                : 'hover:bg-white/10 hover:border-white/20 hover:text-white group-hover:text-white'
-                }`}
-            >
-              <item.icon
-                className={`mr-3 h-5 w-5 transition-all duration-300 ${isActive
-                  ? 'text-gray-900 dark:text-white animate-pulse'
-                  : 'text-gray-900 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white'
-                  }`}
-              />
-              {item.name}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto">
+        {navigationGroups.map((group) => (
+          <div key={group.title}>
+            <div className="flex items-center px-4 mb-3 text-gray-500 dark:text-gray-400">
+              <group.icon className="w-4 h-4 mr-2" />
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                {group.title}
+              </h3>
+            </div>
+            <div className="space-y-1 ml-2">
+              {group.items.map((item: any) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`sidebar__item flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${isActive
+                      ? 'sidebar__item--active bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
+                  >
+                    <item.icon
+                      className={`mr-3 h-5 w-5 flex-shrink-0 transition-all duration-300 ${isActive
+                        ? 'text-primary-600 dark:text-primary-400'
+                        : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'
+                        }`}
+                    />
+                    <span className="font-medium text-sm">{item.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
     </div>
   )

@@ -175,7 +175,7 @@ export interface Incident {
 
 export interface Notification {
   id: string
-  type: 'incident' | 'maintenance' | 'fuel'
+  type: 'incident' | 'maintenance' | 'fuel' | 'stock' | 'system' | 'work_order' | 'machinery'
   title: string
   message: string
   timestamp: string
@@ -292,8 +292,81 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [partMovements, setPartMovements] = useState<PartMovement[]>(() =>
     loadFromStorage('partMovements', MOCK_PART_MOVEMENTS || [])
   )
-  const [incidents, setIncidents] = useState<Incident[]>([])
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [incidents, setIncidents] = useState<Incident[]>(() =>
+    loadFromStorage('incidents', [])
+  )
+  const [notifications, setNotifications] = useState<Notification[]>([
+    {
+      id: '1',
+      type: 'maintenance',
+      title: 'Mantenimiento Programado',
+      message: 'El tractor T001 requiere mantenimiento preventivo en las próximas 24 horas',
+      timestamp: '2024-03-25T07:30:00Z',
+      read: false,
+      link: '/mantenimientos'
+    },
+    {
+      id: '2',
+      type: 'fuel',
+      title: 'Consumo Anómalo de Combustible',
+      message: 'El tractor T002 ha consumido 50% más combustible de lo normal en las últimas 2 horas',
+      timestamp: '2024-03-25T09:15:00Z',
+      read: false,
+      link: '/combustible'
+    },
+    {
+      id: '3',
+      type: 'stock',
+      title: 'Stock Bajo de Repuestos',
+      message: 'Filtro de aceite motor (FIL-001) está por debajo del stock mínimo',
+      timestamp: '2024-03-25T08:45:00Z',
+      read: true,
+      link: '/repuestos'
+    },
+    {
+      id: '4',
+      type: 'work_order',
+      title: 'Orden de Trabajo Completada',
+      message: 'La orden OT-2024-001 ha sido completada exitosamente',
+      timestamp: '2024-03-25T07:20:00Z',
+      read: true,
+      link: '/ordenes-trabajo'
+    },
+    {
+      id: '5',
+      type: 'system',
+      title: 'Respaldo Completado',
+      message: 'El respaldo automático de la base de datos se completó exitosamente',
+      timestamp: '2024-03-25T06:00:00Z',
+      read: true
+    },
+    {
+      id: '6',
+      type: 'machinery',
+      title: 'Maquinaria Fuera de Servicio',
+      message: 'El pulverizador PUL001 ha sido marcado como fuera de servicio',
+      timestamp: '2024-03-24T16:30:00Z',
+      read: false,
+      link: '/maquinarias'
+    },
+    {
+      id: '7',
+      type: 'fuel',
+      title: 'Carga de Combustible Registrada',
+      message: 'Se registró una carga de 150L de combustible para el tractor T001',
+      timestamp: '2024-03-24T14:15:00Z',
+      read: true,
+      link: '/combustible'
+    },
+    {
+      id: '8',
+      type: 'system',
+      title: 'Error de Conexión',
+      message: 'Se perdió la conexión con el servidor de ubicación GPS',
+      timestamp: '2024-03-24T12:00:00Z',
+      read: false
+    }
+  ])
 
   // Usuarios predefinidos (copiados de AuthContext o mockeados aquí)
   const [users, setUsers] = useState<User[]>(() =>
@@ -377,16 +450,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (machineryData) setMachinery(machineryData as Machinery[])
 
       // Fetch work orders
-      const { data: workOrdersData } = await supabase.from('work_orders').select('*')
+      const { data: workOrdersData } = await supabase
+        .from('work_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+
       if (workOrdersData) setWorkOrders(workOrdersData as WorkOrder[])
 
       // Fetch maintenance
-      const { data: maintenancesData } = await supabase.from('maintenances').select('*')
+      const { data: maintenancesData } = await supabase
+        .from('maintenances')
+        .select('*')
+        .order('created_at', { ascending: false })
       if (maintenancesData) setMaintenances(maintenancesData as Maintenance[])
 
       // Fetch Incidents
-      const { data: incidentsData } = await supabase.from('incidents').select('*')
-      if (incidentsData) setIncidents(incidentsData as Incident[])
+      console.log('Fetching incidents...')
+      const { data: incidentsData, error: incidentsError } = await supabase
+        .from('incidents')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (incidentsError) {
+        console.error('Error fetching incidents:', incidentsError)
+      } else if (incidentsData) {
+        console.log(`Fetched ${incidentsData.length} incidents`)
+        setIncidents(incidentsData as Incident[])
+      }
+
+      // Fetch Fuel Loads
+      const { data: fuelLoadsData } = await supabase
+        .from('fuel_loads')
+        .select('*')
+        .order('date', { ascending: false })
+      if (fuelLoadsData) setFuelLoads(fuelLoadsData as FuelLoad[])
 
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -420,7 +517,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             message: `${newIncident.title} - Reportado por ${newIncident.reporter_id}`,
             timestamp: new Date().toISOString(),
             read: false,
-            link: '/incidencias'
+            link: `/incidencias?id=${newIncident.id}`
           }
 
           setNotifications(prev => [newNotification, ...prev])
@@ -642,14 +739,80 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Funciones de órdenes de trabajo
   const addWorkOrder = async (newWorkOrder: Omit<WorkOrder, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+
+
       if (supabase) {
-        // Generar ID único
-        const id = `OT-${Date.now()}`
+        // Generar ID único usando la base de datos para evitar colisiones
+        const now = new Date()
+        const year = now.getFullYear()
+
+        // Formato ID: OT-AAAA-SEQ (Ej: OT-2025-003)
+        const prefix = `OT-${year}-`
+        let nextSeq = 1
+
+        try {
+          // Intentar consultar la ÚLTIMA orden creada (globalmente) para mantener la secuencia
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+
+          const dbPromise = supabase
+            .from('work_orders')
+            .select('id')
+            .order('created_at', { ascending: false }) // Ordenar por fecha creación descendente
+            .limit(1)
+
+          const result: any = await Promise.race([dbPromise, timeoutPromise])
+          const { data: lastConfig, error: idError } = result
+
+          if (!idError && lastConfig && lastConfig.length > 0) {
+            const lastId = lastConfig[0].id
+            const parts = lastId.split('-')
+            // Asumimos formato OT-FECHA-SECUENCIA
+            if (parts.length >= 3) {
+              const lastSeqPart = parts[parts.length - 1] // Última parte es la secuencia
+              const currentSeq = parseInt(lastSeqPart, 10)
+              if (!isNaN(currentSeq)) {
+                nextSeq = currentSeq + 1
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Error consultando secuencia global, intentando cálculo local:', err)
+
+          // Fallback Local: Buscar el ID con el número de secuencia más alto en TODAS las órdenes locales
+          let maxSeq = 0
+          workOrders.forEach(wo => {
+            const parts = wo.id.split('-')
+            if (parts.length >= 3) {
+              const seq = parseInt(parts[parts.length - 1], 10)
+              if (!isNaN(seq) && seq > maxSeq) maxSeq = seq
+            }
+          })
+          nextSeq = maxSeq + 1
+        }
+
+        // Ensure nextSeq is valid
+        if (isNaN(nextSeq) || nextSeq < 1) nextSeq = 1
+
+        const id = `${prefix}${String(nextSeq).padStart(3, '0')}`
+
+        // Check if ID already exists locally (just in case of collision with today's date prefix)
+        if (workOrders.some(wo => wo.id === id)) {
+          console.warn(`ID conflict detected locally for ${id}, incrementing...`)
+          // Si colisiona, simplemente incrementamos hasta encontrar hueco
+          let tempSeq = nextSeq
+          let tempId = id
+          while (workOrders.some(wo => wo.id === tempId)) {
+            tempSeq++
+            tempId = `${prefix}${String(tempSeq).padStart(3, '0')}`
+          }
+          nextSeq = tempSeq
+        }
+        const finalId = `${prefix}${String(nextSeq).padStart(3, '0')}`
 
         // Limpiar el objeto de valores nulos o indefinidos que podrían causar problemas
         // y asegurar que campos opcionales sean manejados correctamente
         const workOrderData = {
-          id,
+          id: finalId,
           client_id: newWorkOrder.client_id,
           field_name: newWorkOrder.field_name,
           task_type: newWorkOrder.task_type,
@@ -672,29 +835,80 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         console.log('Enviando orden a Supabase:', workOrderData)
 
-        const { data, error } = await supabase
-          .from('work_orders')
-          .insert([workOrderData])
-          .select()
-          .single()
+        let data, error;
+        try {
+          const result = await supabase
+            .from('work_orders')
+            .insert([workOrderData])
+            .select()
+            .single()
 
-        if (error) {
-          console.error('Detalles del error Supabase:', error)
-          throw error
+          data = result.data
+          error = result.error
+        } catch (fetchError: any) {
+          console.error("CRITICAL: Supabase INSERT failed with exception, falling back to local update:", fetchError)
+          // Don't throw, just treat as offline/error and save locally
+          error = { message: fetchError.message || 'Network error', details: 'Offline fallback triggered', hint: 'Saved locally', code: 'OFFLINE' }
         }
 
-        setWorkOrders(prev => [...prev, data as WorkOrder])
-        toast.success('Orden de trabajo creada exitosamente')
+        if (error) {
+          console.warn('Supabase insert failed, saving locally:', error)
+          // If it was a network error or explicitly handled, we might want to save it locally
+          // Construct the object manually since 'data' is undefined
+          const offlineOrder: WorkOrder = {
+            id: workOrderData.id,
+            client_id: workOrderData.client_id,
+            field_name: workOrderData.field_name,
+            task_type: workOrderData.task_type,
+            description: workOrderData.description,
+            priority: workOrderData.priority,
+            planned_start_date: workOrderData.planned_start_date,
+            planned_end_date: workOrderData.planned_end_date,
+            status: workOrderData.status,
+            assigned_machinery: workOrderData.assigned_machinery,
+            target_hectares: workOrderData.target_hectares,
+            target_hours: workOrderData.target_hours,
+            actual_hectares: workOrderData.actual_hectares,
+            actual_hours: workOrderData.actual_hours,
+            progress_percentage: workOrderData.progress_percentage,
+            actual_start_date: workOrderData.actual_start_date || null,
+            actual_end_date: workOrderData.actual_end_date || null,
+            assigned_operator: workOrderData.assigned_operator || '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+          setWorkOrders(prev => [offlineOrder, ...prev])
+          toast.success(`Orden creada (Modo Offline/Error de Red): ${finalId}`)
+          return // Return early so we don't hit the success block below or the outer catch
+        }
+
+        setWorkOrders(prev => [data as WorkOrder, ...prev])
+        toast.success(`Orden de trabajo creada: ${finalId}`)
       } else {
-        const id = `OT-${Date.now()}`
+        // Fallback local sin Supabase
+        const now = new Date()
+        const year = now.getFullYear()
+        const prefix = `OT-${year}-`
+
+        const yearOrders = workOrders.filter(wo => wo.id.startsWith(prefix))
+        let maxSeq = 0
+        yearOrders.forEach(wo => {
+          const parts = wo.id.split('-')
+          if (parts.length === 3) {
+            const seq = parseInt(parts[2], 10)
+            if (!isNaN(seq) && seq > maxSeq) maxSeq = seq
+          }
+        })
+        const id = `${prefix}${String(maxSeq + 1).padStart(3, '0')}`
+
         const workOrderWithId: WorkOrder = {
           ...newWorkOrder,
           id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
-        setWorkOrders(prev => [...prev, workOrderWithId])
-        toast.success('Orden de trabajo creada (Local)')
+        setWorkOrders(prev => [workOrderWithId, ...prev])
+        toast.success(`Orden de trabajo creada (Local): ${id}`)
       }
     } catch (error: any) {
       console.error('Error adding work order:', error)
@@ -715,14 +929,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteWorkOrder = async (id: string) => {
     try {
       if (supabase) {
-        const { error } = await supabase
-          .from('work_orders')
-          .delete()
-          .eq('id', id)
+        let error;
+        try {
+          const { error: deleteError } = await supabase
+            .from('work_orders')
+            .delete()
+            .eq('id', id)
+          error = deleteError
+        } catch (fetchError: any) {
+          console.error("Supabase DELETE exception:", fetchError)
+          error = { message: fetchError.message || 'Network Error', code: 'OFFLINE_EXCEPTION' } as any
+        }
 
-        if (error) throw error
+        // Si hay error, verificamos si es de red/CORS para hacer fallback local
+        if (error) {
+          console.warn('Error eliminando en Supabase:', error)
+          const isNetworkError = error.message?.includes('fetch') ||
+            error.message?.includes('network') ||
+            error.message?.includes('connection') ||
+            // Supabase-js sometimes returns null code for fetch errors, or specific strings
+            !error.code;
+
+          if (isNetworkError) {
+            toast('Eliminada localmente (Error de conexión)', { icon: '⚠️' });
+            // Continuamos a eliminar localmente abajo
+          } else {
+            // Si es otro error (ej: permisos), lanzamos la excepción
+            throw error
+          }
+        }
+
         setWorkOrders(prev => prev.filter(wo => wo.id !== id))
-        toast.success('Orden de trabajo eliminada exitosamente')
+        if (!error) toast.success('Orden de trabajo eliminada exitosamente')
       } else {
         setWorkOrders(prev => prev.filter(wo => wo.id !== id))
         toast.success('Orden de trabajo eliminada (Local)')
@@ -740,17 +978,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Funciones de mantenimientos
   const addMaintenance = async (newMaintenance: Omit<Maintenance, 'id' | 'created_at'>) => {
     try {
+      // Intentar guardar en Supabase primero
       if (supabase) {
-        const { data, error } = await supabase
-          .from('maintenances')
-          .insert([newMaintenance])
-          .select()
-          .single()
+        let data = null
+        let error = null
 
-        if (error) throw error
+        try {
+          const result = await supabase
+            .from('maintenances')
+            .insert([newMaintenance])
+            .select()
+            .single()
+
+          data = result.data
+          error = result.error
+        } catch (fetchError: any) {
+          console.warn('Supabase fetch/network error:', fetchError)
+          // Crear un objeto de error que active el fallback
+          error = {
+            message: fetchError.message || 'Network error',
+            details: 'Offline fallback triggered',
+            code: 'OFFLINE'
+          } as any
+        }
+
+        if (error) {
+          console.warn('Supabase insert failed, falling back to local:', error)
+
+          // Fallback Local
+          const id = Math.max(...maintenances.map(m => m.id), 0) + 1
+          const maintenanceWithId: Maintenance = {
+            ...newMaintenance,
+            id,
+            created_at: new Date().toISOString()
+          }
+          setMaintenances(prev => [...prev, maintenanceWithId])
+          toast.success('Mantenimiento programado (Modo Offline/Local)')
+          return
+        }
+
+        // Éxito en Supabase
         setMaintenances(prev => [...prev, data as Maintenance])
         toast.success('Mantenimiento programado exitosamente')
       } else {
+        // Fallback si no hay cliente Supabase
         const id = Math.max(...maintenances.map(m => m.id), 0) + 1
         const maintenanceWithId: Maintenance = {
           ...newMaintenance,
@@ -762,7 +1033,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       console.error('Error adding maintenance:', error)
-      toast.error('Error al programar mantenimiento: ' + error.message)
+      toast.error('Error crítico al programar mantenimiento: ' + error.message)
     }
   }
 

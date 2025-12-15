@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { 
-  Bell, CheckCircle, XCircle, AlertTriangle, Info, 
-  Clock, Mail, MessageSquare, Truck, Wrench, Fuel, 
+import {
+  Bell, CheckCircle, XCircle, AlertTriangle, Info,
+  Clock, Mail, MessageSquare, Truck, Wrench, Fuel,
   Package, Filter, Search, Check, Trash2,
   Settings, RefreshCw, Archive, AlertCircle, Eye, MapPin, X
 } from 'lucide-react'
@@ -47,7 +47,7 @@ interface Incident {
 }
 
 export default function NotificacionesPage() {
-  const { machinery } = useApp()
+  const { machinery, notifications: appNotifications, incidents: appIncidents, markNotificationAsRead } = useApp()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,8 +57,27 @@ export default function NotificacionesPage() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
 
   useEffect(() => {
-    // Mock data para notificaciones
-    const mockNotifications: Notification[] = [
+    // Transformar notificaciones del contexto al formato local
+    const mappedNotifications: Notification[] = appNotifications.map((n: any) => ({
+      id: parseInt(n.id) || Date.now(), // Fallback por si id no es numérico
+      type: n.type === 'incident' ? 'warning' : 'info', // Simplificación
+      category: n.type === 'incident' ? 'machinery' : 'system',
+      title: n.title,
+      message: n.message,
+      isRead: n.read,
+      createdAt: n.timestamp,
+      priority: 'high', // Por defecto
+      actionRequired: true,
+      actionUrl: n.link,
+      relatedId: 0
+    }))
+
+    // Combinar con mock data si es necesario, o reemplazar.
+    // Para este caso, vamos a usar los datos reales + mocks para que no se vea vacío si no hay datos reales aún
+    // Pero lo ideal es usar solo reales. Vamos a dejar los mocks iniciales y añadir los reales al principio.
+
+    // Mock data original para rellenar
+    const initialNotifications: Notification[] = [
       {
         id: 1,
         type: 'warning',
@@ -66,7 +85,7 @@ export default function NotificacionesPage() {
         title: 'Mantenimiento Programado',
         message: 'El tractor T001 requiere mantenimiento preventivo en las próximas 24 horas',
         isRead: false,
-        createdAt: '2024-03-25T10:30:00Z',
+        createdAt: '2024-03-25T07:30:00Z',
         priority: 'high',
         actionRequired: true,
         actionUrl: '/mantenimientos',
@@ -159,99 +178,45 @@ export default function NotificacionesPage() {
         priority: 'critical',
         actionRequired: true
       }
-    ]
-    
-    setNotifications(mockNotifications)
-    
-    // Mock data para incidencias
-    const mockIncidents: Incident[] = [
-      {
-        id: 1,
-        title: 'Falla en Sistema Hidráulico',
-        description: 'El tractor John Deere 6120M presenta pérdida de presión en el sistema hidráulico. Se detectó fuga de aceite en la manguera principal.',
-        type: 'mechanical',
-        severity: 'high',
-        status: 'open',
-        reportedBy: 'Juan Pérez',
-        reportedAt: '2024-03-25T10:00:00Z',
-        assignedTo: 'Roberto Silva',
-        machineryId: 1,
-        machineryCode: 'TR-001',
-        location: 'Parcela 12, Sector Norte'
-      },
-      {
-        id: 2,
-        title: 'Sobrecarga de Combustible Detectada',
-        description: 'El tractor T002 ha consumido 50% más combustible de lo normal. Posible problema en el sistema de inyección o fuga no detectada.',
-        type: 'operational',
-        severity: 'critical',
-        status: 'in_progress',
-        reportedBy: 'Sistema Automático',
-        reportedAt: '2024-03-25T09:15:00Z',
-        assignedTo: 'Carlos Rodríguez',
-        machineryId: 35,
-        machineryCode: 'TR-002',
-        location: 'Campo Central'
-      },
-      {
-        id: 3,
-        title: 'Accidente Menor en Campo',
-        description: 'Colisión menor entre tractor y implemento durante operación de rastraje. No hay heridos, pero hay daños en el implemento.',
-        type: 'safety',
-        severity: 'medium',
-        status: 'resolved',
-        reportedBy: 'María González',
-        reportedAt: '2024-03-24T14:30:00Z',
-        assignedTo: 'Pedro Martínez',
-        machineryId: 1,
-        machineryCode: 'TR-001',
-        location: 'Potrero Norte',
-        resolution: 'Implemento reparado, se realizó inspección de seguridad completa.',
-        resolvedAt: '2024-03-24T18:00:00Z'
-      },
-      {
-        id: 4,
-        title: 'Derrame de Combustible',
-        description: 'Derrame de aproximadamente 20 litros de combustible durante carga. Área contenida pero requiere limpieza.',
-        type: 'environmental',
-        severity: 'medium',
-        status: 'open',
-        reportedBy: 'Luis Fernández',
-        reportedAt: '2024-03-24T11:20:00Z',
-        location: 'Bodega Principal'
-      },
-      {
-        id: 5,
-        title: 'Falla en Sistema de Transmisión',
-        description: 'La cosechadora CG-001 presenta problemas al cambiar de marcha. Se escuchan ruidos anómalos en la caja de cambios.',
-        type: 'mechanical',
-        severity: 'high',
-        status: 'in_progress',
-        reportedBy: 'Ana López',
-        reportedAt: '2024-03-23T16:45:00Z',
-        assignedTo: 'Roberto Silva',
-        machineryId: 23,
-        machineryCode: 'CG-001',
-        location: 'Campo Sur'
-      }
-    ]
-    
-    setIncidents(mockIncidents)
+    ];
+
+    setNotifications([...mappedNotifications, ...initialNotifications.filter(m => !mappedNotifications.some(rn => rn.title === m.title))])
+
+    // Mapear incidentes reales
+    const mappedIncidents: Incident[] = appIncidents.map((inc: any) => ({
+      id: inc.id,
+      title: inc.title,
+      description: inc.description || '',
+      type: inc.type || 'other',
+      severity: inc.severity || 'medium',
+      status: inc.status || 'open',
+      reportedBy: inc.reporter_id || 'Usuario',
+      reportedAt: inc.created_at,
+      assignedTo: inc.assigned_to,
+      machineryId: inc.machinery_id,
+      machineryCode: 'MAQ-' + inc.machinery_id, // Placeholder
+      location: 'Ubicación registrada',
+      resolution: inc.resolution,
+      resolvedAt: inc.resolved_at
+    }))
+
+    setIncidents(mappedIncidents)
     setLoading(false)
-  }, [])
+  }, [appNotifications, appIncidents])
+
 
   const filteredNotifications = notifications.filter(notification => {
-    const matchesFilter = filter === 'all' || 
-                         (filter === 'unread' && !notification.isRead) ||
-                         (filter === 'read' && notification.isRead) ||
-                         notification.category === filter ||
-                         notification.type === filter ||
-                         notification.priority === filter
-    
-    const matchesSearch = searchTerm === '' || 
-                         notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase())
-    
+    const matchesFilter = filter === 'all' ||
+      (filter === 'unread' && !notification.isRead) ||
+      (filter === 'read' && notification.isRead) ||
+      notification.category === filter ||
+      notification.type === filter ||
+      notification.priority === filter
+
+    const matchesSearch = searchTerm === '' ||
+      notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      notification.message.toLowerCase().includes(searchTerm.toLowerCase())
+
     return matchesFilter && matchesSearch
   })
 
@@ -262,7 +227,7 @@ export default function NotificacionesPage() {
     if (category === 'machinery') return <Truck className="h-5 w-5" />
     if (category === 'work_order') return <CheckCircle className="h-5 w-5" />
     if (category === 'system') return <Settings className="h-5 w-5" />
-    
+
     switch (type) {
       case 'error': return <XCircle className="h-5 w-5" />
       case 'warning': return <AlertTriangle className="h-5 w-5" />
@@ -273,10 +238,10 @@ export default function NotificacionesPage() {
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'error': return 'text-red-500'
-      case 'warning': return 'text-yellow-500'
-      case 'success': return 'text-green-500'
-      default: return 'text-blue-500'
+      case 'error': return 'text-red-500 dark:text-red-400'
+      case 'warning': return 'text-yellow-500 dark:text-yellow-400'
+      case 'success': return 'text-green-500 dark:text-green-400'
+      default: return 'text-blue-500 dark:text-blue-400'
     }
   }
 
@@ -311,7 +276,7 @@ export default function NotificacionesPage() {
   }
 
   const markAsRead = (id: number) => {
-    setNotifications(notifications.map(notification => 
+    setNotifications(notifications.map(notification =>
       notification.id === id ? { ...notification, isRead: true } : notification
     ))
     toast.success('Notificación marcada como leída')
@@ -329,23 +294,23 @@ export default function NotificacionesPage() {
 
   const unreadCount = notifications.filter(n => !n.isRead).length
   const criticalCount = notifications.filter(n => n.priority === 'critical' && !n.isRead).length
-  
+
   const openIncidentsCount = incidents.filter(i => i.status === 'open').length
   const criticalIncidentsCount = incidents.filter(i => i.severity === 'critical' && i.status !== 'closed').length
-  
+
   const filteredIncidents = incidents.filter(incident => {
-    const matchesSearch = searchTerm === '' || 
-                         incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         incident.description.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesFilter = filter === 'all' || 
-                         incident.status === filter ||
-                         incident.type === filter ||
-                         incident.severity === filter
-    
+    const matchesSearch = searchTerm === '' ||
+      incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      incident.description.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesFilter = filter === 'all' ||
+      incident.status === filter ||
+      incident.type === filter ||
+      incident.severity === filter
+
     return matchesSearch && matchesFilter
   })
-  
+
   const getIncidentTypeLabel = (type: string) => {
     switch (type) {
       case 'mechanical': return 'Mecánica'
@@ -355,25 +320,25 @@ export default function NotificacionesPage() {
       default: return 'Otro'
     }
   }
-  
+
   const getIncidentSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200'
-      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200'
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-      default: return 'text-blue-600 bg-blue-50 border-blue-200'
+      case 'critical': return 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800'
+      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-900/20 dark:border-orange-800'
+      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-800'
+      default: return 'text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-800'
     }
   }
-  
+
   const getIncidentStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'text-red-600 bg-red-50'
-      case 'in_progress': return 'text-yellow-600 bg-yellow-50'
-      case 'resolved': return 'text-green-600 bg-green-50'
-      default: return 'text-gray-600 bg-gray-50'
+      case 'open': return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20'
+      case 'in_progress': return 'text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20'
+      case 'resolved': return 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20'
+      default: return 'text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-700/50'
     }
   }
-  
+
   const getIncidentStatusLabel = (status: string) => {
     switch (status) {
       case 'open': return 'Abierta'
@@ -409,8 +374,8 @@ export default function NotificacionesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Notificaciones e Incidencias</h1>
-          <p className="text-gray-600">Gestiona las alertas, notificaciones e incidencias del sistema</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Notificaciones e Incidencias</h1>
+          <p className="text-gray-600 dark:text-gray-400">Gestiona las alertas, notificaciones e incidencias del sistema</p>
         </div>
         <div className="flex space-x-2">
           {activeTab === 'notifications' && (
@@ -440,11 +405,10 @@ export default function NotificacionesPage() {
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'notifications'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'notifications'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <div className="flex items-center space-x-2">
               <Bell className="h-4 w-4" />
@@ -456,11 +420,10 @@ export default function NotificacionesPage() {
           </button>
           <button
             onClick={() => setActiveTab('incidents')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'incidents'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'incidents'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-4 w-4" />
@@ -476,48 +439,48 @@ export default function NotificacionesPage() {
       {/* Estadísticas rápidas */}
       {activeTab === 'notifications' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
+          <Card onClick={() => setFilter('all')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'all' ? 'ring-2 ring-blue-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total</p>
-                  <p className="text-2xl font-bold text-gray-900">{notifications.length}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{notifications.length}</p>
                 </div>
                 <Bell className="h-8 w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
+
+          <Card onClick={() => setFilter('unread')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'unread' ? 'ring-2 ring-orange-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">No Leídas</p>
-                  <p className="text-2xl font-bold text-orange-600">{unreadCount}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No Leídas</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-500">{unreadCount}</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-orange-500" />
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
+
+          <Card onClick={() => setFilter('critical')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'critical' ? 'ring-2 ring-red-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Críticas</p>
-                  <p className="text-2xl font-bold text-red-600">{criticalCount}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Críticas</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-500">{criticalCount}</p>
                 </div>
                 <XCircle className="h-8 w-8 text-red-500" />
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
+
+          <Card onClick={() => setFilter('read')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'read' ? 'ring-2 ring-green-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Leídas</p>
-                  <p className="text-2xl font-bold text-green-600">{notifications.length - unreadCount}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Leídas</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-500">{notifications.length - unreadCount}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
@@ -528,48 +491,48 @@ export default function NotificacionesPage() {
 
       {activeTab === 'incidents' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
+          <Card onClick={() => setFilter('all')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'all' ? 'ring-2 ring-blue-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total</p>
-                  <p className="text-2xl font-bold text-gray-900">{incidents.length}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{incidents.length}</p>
                 </div>
                 <AlertCircle className="h-8 w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
+
+          <Card onClick={() => setFilter('open')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'open' ? 'ring-2 ring-red-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Abiertas</p>
-                  <p className="text-2xl font-bold text-red-600">{openIncidentsCount}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Abiertas</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-500">{openIncidentsCount}</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-red-500" />
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
+
+          <Card onClick={() => setFilter('critical')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'critical' ? 'ring-2 ring-red-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Críticas</p>
-                  <p className="text-2xl font-bold text-red-600">{criticalIncidentsCount}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Críticas</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-500">{criticalIncidentsCount}</p>
                 </div>
                 <XCircle className="h-8 w-8 text-red-500" />
               </div>
             </CardContent>
           </Card>
-          
-          <Card>
+
+          <Card onClick={() => setFilter('resolved')} className={`cursor-pointer hover:shadow-lg transition-all dark:bg-gray-800 ${filter === 'resolved' ? 'ring-2 ring-green-500' : ''}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Resueltas</p>
-                  <p className="text-2xl font-bold text-green-600">{incidents.filter(i => i.status === 'resolved' || i.status === 'closed').length}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Resueltas</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-500">{incidents.filter(i => i.status === 'resolved' || i.status === 'closed').length}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
@@ -589,15 +552,15 @@ export default function NotificacionesPage() {
                 placeholder={activeTab === 'notifications' ? "Buscar notificaciones..." : "Buscar incidencias..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full"
+                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full"
               />
             </div>
-            
+
             <div>
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 {activeTab === 'notifications' ? (
                   <>
@@ -629,13 +592,13 @@ export default function NotificacionesPage() {
                 )}
               </select>
             </div>
-            
+
             {activeTab === 'notifications' && (
               <div>
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="all">Todos los tipos</option>
                   <option value="error">Errores</option>
@@ -645,11 +608,6 @@ export default function NotificacionesPage() {
                 </select>
               </div>
             )}
-            
-            <Button variant="outline" className="flex items-center space-x-2">
-              <Filter className="h-4 w-4" />
-              <span>Filtros</span>
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -658,11 +616,10 @@ export default function NotificacionesPage() {
       {activeTab === 'notifications' && (
         <div className="space-y-4">
           {filteredNotifications.map((notification) => (
-            <Card 
-              key={notification.id} 
-              className={`hover:shadow-md transition-shadow ${
-                !notification.isRead ? 'ring-2 ring-blue-100 bg-blue-50' : ''
-              }`}
+            <Card
+              key={notification.id}
+              className={`hover:shadow-md transition-shadow dark:bg-gray-800 ${!notification.isRead ? 'ring-2 ring-blue-100 bg-blue-50 dark:bg-blue-900/10 dark:ring-blue-900/30' : ''
+                }`}
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -673,17 +630,17 @@ export default function NotificacionesPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                             {notification.title}
                           </h3>
                           {!notification.isRead && (
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{notification.message}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{notification.message}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />
@@ -706,6 +663,7 @@ export default function NotificacionesPage() {
                       <div className="mt-3">
                         <Button
                           size="sm"
+                          variant="outline"
                           onClick={() => window.location.href = notification.actionUrl!}
                           className="flex items-center space-x-2"
                         >
@@ -749,9 +707,9 @@ export default function NotificacionesPage() {
       {activeTab === 'notifications' && filteredNotifications.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron notificaciones</h3>
-            <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+            <Bell className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No se encontraron notificaciones</h3>
+            <p className="text-gray-500 dark:text-gray-400">Intenta ajustar los filtros de búsqueda</p>
           </CardContent>
         </Card>
       )}
@@ -760,11 +718,10 @@ export default function NotificacionesPage() {
       {activeTab === 'incidents' && (
         <div className="space-y-4">
           {filteredIncidents.map((incident) => (
-            <Card 
-              key={incident.id} 
-              className={`hover:shadow-md transition-shadow ${
-                incident.status === 'open' ? 'ring-2 ring-red-100 bg-red-50/50' : ''
-              }`}
+            <Card
+              key={incident.id}
+              className={`hover:shadow-md transition-shadow dark:bg-gray-800 ${incident.status === 'open' ? 'ring-2 ring-red-100 bg-red-50/50 dark:bg-red-900/10 dark:ring-red-900/30' : ''
+                }`}
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -773,22 +730,22 @@ export default function NotificacionesPage() {
                       <AlertCircle className={`h-5 w-5 ${getIncidentSeverityColor(incident.severity).split(' ')[0] || 'text-gray-500'}`} />
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                             {incident.title}
                           </h3>
                           {incident.status === 'open' && (
                             <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">{incident.description}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{incident.description}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-wrap items-center gap-3 text-sm mb-3">
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentSeverityColor(incident.severity)}`}>
-                        {incident.severity === 'critical' ? 'Crítica' : 
-                         incident.severity === 'high' ? 'Alta' :
-                         incident.severity === 'medium' ? 'Media' : 'Baja'}
+                        {incident.severity === 'critical' ? 'Crítica' :
+                          incident.severity === 'high' ? 'Alta' :
+                            incident.severity === 'medium' ? 'Media' : 'Baja'}
                       </span>
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentStatusColor(incident.status)}`}>
                         {getIncidentStatusLabel(incident.status)}
@@ -825,11 +782,11 @@ export default function NotificacionesPage() {
                     </div>
 
                     {incident.resolution && (
-                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm font-medium text-green-800 mb-1">Resolución:</p>
-                        <p className="text-sm text-green-700">{incident.resolution}</p>
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded-lg">
+                        <p className="text-sm font-medium text-green-800 dark:text-green-400 mb-1">Resolución:</p>
+                        <p className="text-sm text-green-700 dark:text-green-300">{incident.resolution}</p>
                         {incident.resolvedAt && (
-                          <p className="text-xs text-green-600 mt-1">
+                          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
                             Resuelta el: {formatDate(incident.resolvedAt)}
                           </p>
                         )}
@@ -839,6 +796,7 @@ export default function NotificacionesPage() {
                     <div className="mt-3">
                       <Button
                         size="sm"
+                        variant="outline"
                         onClick={() => setSelectedIncident(incident)}
                         className="flex items-center space-x-2"
                       >
@@ -857,21 +815,21 @@ export default function NotificacionesPage() {
       {activeTab === 'incidents' && filteredIncidents.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron incidencias</h3>
-            <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+            <AlertCircle className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No se encontraron incidencias</h3>
+            <p className="text-gray-500 dark:text-gray-400">Intenta ajustar los filtros de búsqueda</p>
           </CardContent>
         </Card>
       )}
 
       {/* Modal de detalles de incidencia */}
       {selectedIncident && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
                 <AlertCircle className={`h-6 w-6 ${getIncidentSeverityColor(selectedIncident.severity).split(' ')[0] || 'text-gray-500'}`} />
-                <h3 className="text-2xl font-semibold text-gray-900">{selectedIncident.title}</h3>
+                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{selectedIncident.title}</h3>
               </div>
               <Button
                 variant="ghost"
@@ -883,71 +841,71 @@ export default function NotificacionesPage() {
 
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Descripción</p>
-                <p className="text-gray-900">{selectedIncident.description}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Descripción</p>
+                <p className="text-gray-900 dark:text-white">{selectedIncident.description}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Tipo</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo</p>
                   <Badge variant="default">{getIncidentTypeLabel(selectedIncident.type)}</Badge>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Severidad</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Severidad</p>
                   <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentSeverityColor(selectedIncident.severity)}`}>
-                    {selectedIncident.severity === 'critical' ? 'Crítica' : 
-                     selectedIncident.severity === 'high' ? 'Alta' :
-                     selectedIncident.severity === 'medium' ? 'Media' : 'Baja'}
+                    {selectedIncident.severity === 'critical' ? 'Crítica' :
+                      selectedIncident.severity === 'high' ? 'Alta' :
+                        selectedIncident.severity === 'medium' ? 'Media' : 'Baja'}
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Estado</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Estado</p>
                   <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getIncidentStatusColor(selectedIncident.status)}`}>
                     {getIncidentStatusLabel(selectedIncident.status)}
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Reportado por</p>
-                  <p className="text-gray-900">{selectedIncident.reportedBy}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Reportado por</p>
+                  <p className="text-gray-900 dark:text-white">{selectedIncident.reportedBy}</p>
                 </div>
                 {selectedIncident.assignedTo && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Asignado a</p>
-                    <p className="text-gray-900">{selectedIncident.assignedTo}</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Asignado a</p>
+                    <p className="text-gray-900 dark:text-white">{selectedIncident.assignedTo}</p>
                   </div>
                 )}
                 {getMachineryName(selectedIncident.machineryId) && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Maquinaria</p>
-                    <p className="text-gray-900">{getMachineryName(selectedIncident.machineryId)}</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Maquinaria</p>
+                    <p className="text-gray-900 dark:text-white">{getMachineryName(selectedIncident.machineryId)}</p>
                   </div>
                 )}
                 {selectedIncident.location && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Ubicación</p>
-                    <p className="text-gray-900">{selectedIncident.location}</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Ubicación</p>
+                    <p className="text-gray-900 dark:text-white">{selectedIncident.location}</p>
                   </div>
                 )}
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Fecha de Reporte</p>
-                <p className="text-gray-900">{formatDate(selectedIncident.reportedAt)} {formatTime(selectedIncident.reportedAt)}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de Reporte</p>
+                <p className="text-gray-900 dark:text-white">{formatDate(selectedIncident.reportedAt)} {formatTime(selectedIncident.reportedAt)}</p>
               </div>
 
               {selectedIncident.resolution && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm font-medium text-green-800 mb-2">Resolución</p>
-                  <p className="text-green-700">{selectedIncident.resolution}</p>
+                <div className="p-4 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded-lg">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-400 mb-2">Resolución</p>
+                  <p className="text-green-700 dark:text-green-300">{selectedIncident.resolution}</p>
                   {selectedIncident.resolvedAt && (
-                    <p className="text-xs text-green-600 mt-2">
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                       Resuelta el: {formatDate(selectedIncident.resolvedAt)} {formatTime(selectedIncident.resolvedAt)}
                     </p>
                   )}
                 </div>
               )}
 
-              <div className="flex justify-end space-x-3 pt-4 border-t">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <Button
                   variant="outline"
                   onClick={() => setSelectedIncident(null)}

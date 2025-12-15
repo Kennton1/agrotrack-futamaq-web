@@ -13,7 +13,7 @@ interface FuelImageUploadProps {
   type?: 'fuel_load' | 'receipt'
 }
 
-export function FuelImageUpload({ 
+export function FuelImageUpload({
   label,
   imageUrl,
   onChange,
@@ -34,51 +34,51 @@ export function FuelImageUpload({
         img.onload = () => {
           let targetWidth = img.width
           let targetHeight = img.height
-          
+
           // Redimensionar si es necesario
           if (targetWidth > maxWidth) {
             targetHeight = Math.round((targetHeight * maxWidth) / targetWidth)
             targetWidth = maxWidth
           }
-          
+
           // Crear canvas para redimensionar y comprimir
           const canvas = document.createElement('canvas')
           canvas.width = targetWidth
           canvas.height = targetHeight
-          
+
           const ctx = canvas.getContext('2d')
           if (!ctx) {
             reject(new Error('No se pudo crear el contexto del canvas'))
             return
           }
-          
+
           // Mejorar la calidad de renderizado
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
-          
+
           // Dibujar la imagen redimensionada
           ctx.drawImage(img, 0, 0, targetWidth, targetHeight)
-          
+
           // Intentar diferentes niveles de calidad hasta conseguir el tamaño deseado
           let quality = 0.8
           let compressedBase64 = ''
           let base64Size = 0
           let attempts = 0
           const maxAttempts = 10
-          
+
           // Reducir calidad progresivamente hasta conseguir el tamaño deseado
           while (attempts < maxAttempts) {
             compressedBase64 = canvas.toDataURL('image/jpeg', quality)
             base64Size = (compressedBase64.length * 3) / 4
-            
+
             // Si el tamaño es aceptable, salir del bucle
             if (base64Size <= maxSizeKB * 1024) {
               break
             }
-            
+
             // Reducir calidad
             quality -= 0.05
-            
+
             // Si la calidad es muy baja y aún es grande, reducir dimensiones
             if (quality < 0.5 && base64Size > maxSizeKB * 1024 && targetWidth > 400) {
               targetWidth = Math.round(targetWidth * 0.85)
@@ -89,10 +89,10 @@ export function FuelImageUpload({
               ctx.drawImage(img, 0, 0, targetWidth, targetHeight)
               quality = 0.7 // Resetear calidad después de redimensionar
             }
-            
+
             attempts++
           }
-          
+
           resolve(compressedBase64)
         }
         img.onerror = () => reject(new Error('Error al cargar la imagen'))
@@ -131,7 +131,7 @@ export function FuelImageUpload({
     const maxSize = 10 * 1024 * 1024 // 10MB
     const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     const allowedPdfTypes = ['application/pdf']
-    
+
     // Si es tipo receipt, permitir imágenes y PDFs
     if (type === 'receipt') {
       const allowedTypes = [...allowedImageTypes, ...allowedPdfTypes]
@@ -146,12 +146,12 @@ export function FuelImageUpload({
         return false
       }
     }
-    
+
     if (file.size > maxSize) {
       alert('El archivo es demasiado grande. El tamaño máximo es 10MB')
       return false
     }
-    
+
     return true
   }
 
@@ -174,8 +174,12 @@ export function FuelImageUpload({
   }, [onChange])
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFileSelect(e.target.files)
+    const files = e.target.files
+    if (files && files.length > 0) {
+      handleFileSelect(files)
+    }
     // Reset input para permitir seleccionar el mismo archivo nuevamente
+    // Hacemos esto DESPUÉS de capturar los archivos
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -202,25 +206,24 @@ export function FuelImageUpload({
   }
 
   const IconComponent = type === 'receipt' ? DollarSign : Camera
-  
+
   // Determinar si el archivo actual es un PDF
   const isPdf = imageUrl?.startsWith('data:application/pdf')
 
   return (
     <div className="space-y-3">
       <Label>{label}</Label>
-      
+
       {/* Upload area */}
       {!imageUrl && (
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-            isDragging
+          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragging
               ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
               : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-800'
-          } ${error ? 'border-red-500' : ''}`}
+            } ${error ? 'border-red-500' : ''}`}
         >
           <input
             ref={fileInputRef}
@@ -230,14 +233,14 @@ export function FuelImageUpload({
             className="hidden"
             disabled={isProcessing}
           />
-          
+
           <div className="flex flex-col items-center space-y-2">
             <div className={`p-3 rounded-full ${isDragging ? 'bg-primary-100 dark:bg-primary-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
               <IconComponent className={`h-6 w-6 ${isDragging ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`} />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {type === 'receipt' 
+                {type === 'receipt'
                   ? 'Arrastra una imagen o PDF aquí o haz clic para seleccionar'
                   : 'Arrastra una imagen aquí o haz clic para seleccionar'}
               </p>
@@ -292,7 +295,7 @@ export function FuelImageUpload({
               </div>
             )}
           </div>
-          
+
           {isPdf ? (
             <div className="w-full min-h-[200px] bg-gray-50 dark:bg-gray-800 flex flex-col items-center justify-center p-6 cursor-pointer" onClick={() => setShowPreviewModal(true)}>
               <div className="p-4 bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
@@ -314,7 +317,7 @@ export function FuelImageUpload({
               />
             </div>
           )}
-          
+
           {/* Overlay */}
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
@@ -371,11 +374,11 @@ export function FuelImageUpload({
 
       {/* Modal de vista previa ampliada */}
       {showPreviewModal && imageUrl && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
           onClick={() => setShowPreviewModal(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-gray-800 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col border dark:border-gray-700"
             onClick={(e) => e.stopPropagation()}
           >

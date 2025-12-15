@@ -284,10 +284,10 @@ export default function ReportesPage() {
 
     // Usar datos filtrados, si están vacíos usar totales, y si aún así están vacíos usar valores por defecto
     return {
-      hectaresWorked: hectaresWorked > 0 ? hectaresWorked : (allHectares > 0 ? allHectares : 156),
-      fuelConsumed: fuelConsumed > 0 ? fuelConsumed : (allFuelConsumed > 0 ? allFuelConsumed : 1240),
-      fuelCost: fuelCost > 0 ? fuelCost : (allFuelCost > 0 ? allFuelCost : 1550000),
-      activeOrders: activeOrders > 0 ? activeOrders : (allActiveOrders > 0 ? allActiveOrders : 4)
+      hectaresWorked: hectaresWorked > 0 ? hectaresWorked : (allHectares > 0 ? allHectares : 0),
+      fuelConsumed: fuelConsumed > 0 ? fuelConsumed : (allFuelConsumed > 0 ? allFuelConsumed : 0),
+      fuelCost: fuelCost > 0 ? fuelCost : (allFuelCost > 0 ? allFuelCost : 0),
+      activeOrders: activeOrders > 0 ? activeOrders : (allActiveOrders > 0 ? allActiveOrders : 0)
     }
   }, [filteredWorkOrders, filteredFuelLoads, workOrders, fuelLoads])
 

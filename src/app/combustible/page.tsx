@@ -599,6 +599,7 @@ export default function CombustiblePage() {
                           tick={{ fill: isDarkMode ? "#9CA3AF" : "#64748b" }}
                         />
                         <Tooltip
+                          cursor={false}
                           content={({ active, payload, label }) => (
                             <CustomTooltip
                               active={active}
@@ -702,6 +703,7 @@ export default function CombustiblePage() {
                           tick={{ fill: isDarkMode ? "#9CA3AF" : "#64748b" }}
                         />
                         <Tooltip
+                          cursor={false}
                           content={({ active, payload, label }) => {
                             if (!active || !payload || !payload.length) return null
                             const mach = machineryConsumption.find(m => m.machinery_code === label)

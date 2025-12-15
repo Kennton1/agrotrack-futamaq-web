@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts'
@@ -27,9 +27,9 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         setIsDarkMode(theme === 'dark')
       }
     }
-    
+
     checkDarkMode()
-    
+
     // Observar cambios en el atributo data-theme
     const observer = new MutationObserver(checkDarkMode)
     if (typeof window !== 'undefined') {
@@ -38,7 +38,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         attributeFilter: ['data-theme']
       })
     }
-    
+
     return () => observer.disconnect()
   }, [])
 
@@ -46,7 +46,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
   const CustomTooltip = ({ active, payload, label, formatter }: any) => {
     if (!active || !payload || !payload.length) return null
     const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
-    
+
     return (
       <div style={{
         backgroundColor: isDark ? '#1F2937' : 'white',
@@ -57,8 +57,8 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         color: isDark ? '#E7E9EA' : '#0F1419'
       }}>
         {label && (
-          <p style={{ 
-            margin: '0 0 8px 0', 
+          <p style={{
+            margin: '0 0 8px 0',
             fontWeight: 'bold',
             color: isDark ? '#E7E9EA' : '#0F1419'
           }}>
@@ -66,12 +66,12 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
           </p>
         )}
         {payload.map((entry: any, index: number) => {
-          const formattedValue = formatter 
+          const formattedValue = formatter
             ? formatter(entry.value, entry.name, entry, index, entry.payload)
             : entry.value
           return (
-            <p key={index} style={{ 
-              margin: '4px 0', 
+            <p key={index} style={{
+              margin: '4px 0',
               color: isDark ? '#E7E9EA' : '#0F1419'
             }}>
               <span style={{ color: entry.color }}>●</span> {entry.name}: {formattedValue}
@@ -95,14 +95,14 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
   // Calcular datos de combustible por mes
   const fuelConsumptionData = useMemo(() => {
     const fuelByMonth: Record<string, { consumo: number; costo: number }> = {}
-    
+
     fuelLoads.forEach(load => {
       const loadDate = new Date(load.date)
       // Si hay filtro de fecha, verificar; si no, incluir todos los datos
       if (dateRange && (loadDate < dateRange.startDate || loadDate > dateRange.endDate)) {
         return
       }
-      
+
       const monthKey = loadDate.toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
       if (!fuelByMonth[monthKey]) {
         fuelByMonth[monthKey] = { consumo: 0, costo: 0 }
@@ -110,7 +110,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
       fuelByMonth[monthKey].consumo += load.liters
       fuelByMonth[monthKey].costo += load.total_cost
     })
-    
+
     let result = Object.entries(fuelByMonth)
       .map(([mes, data]) => ({ mes, consumo: Math.round(data.consumo), costo: data.costo }))
       .sort((a, b) => {
@@ -118,7 +118,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         const dateB = new Date(`1 ${b.mes}`)
         return dateA.getTime() - dateB.getTime()
       })
-    
+
     // Si no hay datos en el rango filtrado, mostrar todos los datos disponibles
     if (result.length === 0 && fuelLoads.length > 0) {
       const allFuelByMonth: Record<string, { consumo: number; costo: number }> = {}
@@ -139,45 +139,45 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
           return dateA.getTime() - dateB.getTime()
         })
     }
-    
+
     return result.slice(-6) // Últimos 6 meses
   }, [fuelLoads, dateRange])
 
   // Calcular datos de mantenimiento por mes
   const maintenanceData = useMemo(() => {
     const maintByMonth: Record<string, { preventivo: number; correctivo: number }> = {}
-    
+
     maintenances.forEach(maint => {
       const maintDate = new Date(maint.scheduled_date)
       // Si hay filtro de fecha, verificar; si no, incluir todos los datos
       if (dateRange && (maintDate < dateRange.startDate || maintDate > dateRange.endDate)) {
         return
       }
-      
+
       const monthKey = maintDate.toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
       if (!maintByMonth[monthKey]) {
         maintByMonth[monthKey] = { preventivo: 0, correctivo: 0 }
       }
-      
+
       if (maint.type === 'preventiva') {
         maintByMonth[monthKey].preventivo += maint.cost
       } else {
         maintByMonth[monthKey].correctivo += maint.cost
       }
     })
-    
+
     let result = Object.entries(maintByMonth)
-      .map(([mes, data]) => ({ 
-        mes, 
-        preventivo: data.preventivo, 
-        correctivo: data.correctivo 
+      .map(([mes, data]) => ({
+        mes,
+        preventivo: data.preventivo,
+        correctivo: data.correctivo
       }))
       .sort((a, b) => {
         const dateA = new Date(`1 ${a.mes}`)
         const dateB = new Date(`1 ${b.mes}`)
         return dateA.getTime() - dateB.getTime()
       })
-    
+
     // Si no hay datos en el rango filtrado, mostrar todos los datos disponibles
     if (result.length === 0 && maintenances.length > 0) {
       const allMaintByMonth: Record<string, { preventivo: number; correctivo: number }> = {}
@@ -187,7 +187,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         if (!allMaintByMonth[monthKey]) {
           allMaintByMonth[monthKey] = { preventivo: 0, correctivo: 0 }
         }
-        
+
         if (maint.type === 'preventiva') {
           allMaintByMonth[monthKey].preventivo += maint.cost
         } else {
@@ -195,10 +195,10 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         }
       })
       result = Object.entries(allMaintByMonth)
-        .map(([mes, data]) => ({ 
-          mes, 
-          preventivo: data.preventivo, 
-          correctivo: data.correctivo 
+        .map(([mes, data]) => ({
+          mes,
+          preventivo: data.preventivo,
+          correctivo: data.correctivo
         }))
         .sort((a, b) => {
           const dateA = new Date(`1 ${a.mes}`)
@@ -206,7 +206,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
           return dateA.getTime() - dateB.getTime()
         })
     }
-    
+
     return result.slice(-6) // Últimos 6 meses
   }, [maintenances, dateRange])
 
@@ -215,14 +215,14 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
     const preventivo = maintenances.filter(m => m.type === 'preventiva').length
     const correctivo = maintenances.filter(m => m.type === 'correctiva').length
     const total = preventivo + correctivo
-    
+
     if (total === 0) {
       return [
         { name: 'Preventivo', value: 0, color: '#10b981' },
         { name: 'Correctivo', value: 0, color: '#f59e0b' },
       ]
     }
-    
+
     return [
       { name: 'Preventivo', value: Math.round((preventivo / total) * 100), color: '#10b981' },
       { name: 'Correctivo', value: Math.round((correctivo / total) * 100), color: '#f59e0b' },
@@ -232,38 +232,38 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
   // Calcular datos de utilización de maquinaria por tipo
   const machineryUtilizationData = useMemo(() => {
     const machineryByType: Record<string, { total: number; horas: number }> = {}
-    
+
     machinery.forEach(mach => {
-      const typeLabel = 
+      const typeLabel =
         mach.type === 'tractor' ? 'Tractores' :
-        mach.type === 'cosechadora' ? 'Cosechadoras' :
-        mach.type === 'sembradora' ? 'Sembradoras' :
-        mach.type === 'pulverizador' ? 'Pulverizadores' :
-        mach.type === 'camion' ? 'Camiones' :
-        'Implementos'
-      
+          mach.type === 'cosechadora' ? 'Cosechadoras' :
+            mach.type === 'sembradora' ? 'Sembradoras' :
+              mach.type === 'pulverizador' ? 'Pulverizadores' :
+                mach.type === 'camion' ? 'Camiones' :
+                  'Implementos'
+
       if (!machineryByType[typeLabel]) {
         machineryByType[typeLabel] = { total: 0, horas: 0 }
       }
       machineryByType[typeLabel].total += 1
       machineryByType[typeLabel].horas += mach.total_hours
     })
-    
+
     // Calcular utilización basada en horas trabajadas vs horas disponibles
     return Object.entries(machineryByType).map(([name, data]) => {
       // Estimación de utilización: asumimos 8 horas/día * 20 días/mes = 160 horas/mes por máquina
       const horasDisponibles = data.total * 160
       const utilizacion = horasDisponibles > 0 ? Math.round((data.horas / horasDisponibles) * 100) : 0
-      
+
       return {
         name,
         utilizacion: Math.min(utilizacion, 100),
         horas: Math.round(data.horas),
         color: name === 'Tractores' ? '#8ba394' :
-               name === 'Cosechadoras' ? '#64748b' :
-               name === 'Sembradoras' ? '#78716c' :
-               name === 'Pulverizadores' ? '#0ea5e9' :
-               '#94a3b8'
+          name === 'Cosechadoras' ? '#64748b' :
+            name === 'Sembradoras' ? '#78716c' :
+              name === 'Pulverizadores' ? '#0ea5e9' :
+                '#94a3b8'
       }
     })
   }, [machinery])
@@ -271,7 +271,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
   // Calcular datos financieros por mes
   const financialData = useMemo(() => {
     const financialByMonth: Record<string, { costos: number }> = {}
-    
+
     // Agrupar costos por mes
     fuelLoads.forEach(load => {
       const loadDate = new Date(load.date)
@@ -285,7 +285,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
       }
       financialByMonth[monthKey].costos += load.total_cost
     })
-    
+
     maintenances.forEach(maint => {
       const maintDate = new Date(maint.scheduled_date)
       if (dateRange && (maintDate < dateRange.startDate || maintDate > dateRange.endDate)) {
@@ -297,7 +297,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
       }
       financialByMonth[monthKey].costos += maint.cost
     })
-    
+
     let result = Object.entries(financialByMonth)
       .map(([mes, data]) => {
         const ingresos = data.costos * 1.4 // 40% de margen
@@ -309,7 +309,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         const dateB = new Date(`1 ${b.mes}`)
         return dateA.getTime() - dateB.getTime()
       })
-    
+
     // Si no hay datos en el rango filtrado, mostrar todos los datos disponibles
     if (result.length === 0 && (fuelLoads.length > 0 || maintenances.length > 0)) {
       const allFinancialByMonth: Record<string, { costos: number }> = {}
@@ -341,7 +341,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
           return dateA.getTime() - dateB.getTime()
         })
     }
-    
+
     // Calcular costos de maquinaria (horas * costo/hora) y distribuir proporcionalmente
     if (result.length > 0) {
       const totalMachineryCost = machinery.reduce((sum, mach) => sum + (mach.total_hours * mach.hourly_cost), 0)
@@ -353,14 +353,14 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         utilidad: ((item.costos + costPerMonth) * 1.4) - (item.costos + costPerMonth)
       }))
     }
-    
+
     return result.slice(-6) // Últimos 6 meses
   }, [fuelLoads, maintenances, machinery, dateRange])
 
   // Calcular datos de inventario por categoría
   const inventoryData = useMemo(() => {
     const inventoryByCategory: Record<string, { stock: number; valor: number }> = {}
-    
+
     spareParts.forEach(part => {
       if (!inventoryByCategory[part.category]) {
         inventoryByCategory[part.category] = { stock: 0, valor: 0 }
@@ -368,7 +368,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
       inventoryByCategory[part.category].stock += part.current_stock
       inventoryByCategory[part.category].valor += part.current_stock * part.unit_cost
     })
-    
+
     return Object.entries(inventoryByCategory)
       .map(([categoria, data]) => ({
         categoria,
@@ -382,7 +382,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
   const stockStatusData = useMemo(() => {
     const normal = spareParts.filter(p => p.current_stock > p.minimum_stock).length
     const bajo = spareParts.filter(p => p.current_stock <= p.minimum_stock).length
-    
+
     return [
       { name: 'Stock Normal', value: normal, color: '#10b981' },
       { name: 'Stock Bajo', value: bajo, color: '#ef4444' },
@@ -400,30 +400,31 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={fuelConsumptionData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                <XAxis 
-                  dataKey="mes" 
+                <XAxis
+                  dataKey="mes"
                   stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                   tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                 />
-                <YAxis 
+                <YAxis
                   stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                   tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                 />
-                <Tooltip 
-                  content={(props) => <CustomTooltip {...props} formatter={(value: any, name: string) => 
+                <Tooltip
+                  cursor={false}
+                  content={(props) => <CustomTooltip {...props} formatter={(value: any, name: string) =>
                     name === 'consumo' ? `${value}L` : formatCLP(Number(value))
                   } />}
                 />
-                <Legend 
+                <Legend
                   wrapperStyle={{ paddingTop: '20px', color: isDarkMode ? '#E7E9EA' : '#0F1419' }}
                   iconType="square"
                   formatter={() => 'Consumo (L)'}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="consumo" 
-                  stroke="#3b82f6" 
-                  fill="#3b82f6" 
+                <Area
+                  type="monotone"
+                  dataKey="consumo"
+                  stroke="#3b82f6"
+                  fill="#3b82f6"
                   fillOpacity={0.3}
                   name="Consumo (L)"
                 />
@@ -441,27 +442,28 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {fuelConsumptionData.length > 0 ? (
                 <LineChart data={fuelConsumptionData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="mes" 
+                  <XAxis
+                    dataKey="mes"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
+                  <Tooltip
+                    cursor={false}
                     content={(props) => <CustomTooltip {...props} formatter={(value: any) => `${value}L`} />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px', color: isDarkMode ? '#E7E9EA' : '#0F1419' }}
                     iconType="line"
                     formatter={() => 'Consumo (L)'}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="consumo" 
-                    stroke="#10b981" 
+                  <Line
+                    type="monotone"
+                    dataKey="consumo"
+                    stroke="#10b981"
                     strokeWidth={3}
                     dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
                     name="Consumo (L)"
@@ -491,19 +493,20 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {maintenanceData.length > 0 ? (
                 <BarChart data={maintenanceData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="mes" 
+                  <XAxis
+                    dataKey="mes"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
+                  <Tooltip
+                    cursor={false}
                     content={(props) => <CustomTooltip {...props} formatter={(value: any) => formatCLP(Number(value))} />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px', color: isDarkMode ? '#E7E9EA' : '#0F1419' }}
                     iconType="square"
                   />
@@ -540,10 +543,10 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   content={(props) => <CustomTooltip {...props} />}
                 />
-                <Legend 
+                <Legend
                   wrapperStyle={{ paddingTop: '20px', color: isDarkMode ? '#E7E9EA' : '#0F1419' }}
                   iconType="circle"
                 />
@@ -567,19 +570,20 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {machineryUtilizationData.length > 0 ? (
                 <BarChart data={machineryUtilizationData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="name" 
+                  <XAxis
+                    dataKey="name"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
+                  <Tooltip
+                    cursor={false}
                     content={(props) => <CustomTooltip {...props} formatter={(value: any) => `${value}%`} />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="square"
                     formatter={() => 'Utilización (%)'}
@@ -606,10 +610,11 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip 
+                  <Tooltip
+                    cursor={false}
                     content={(props) => <CustomTooltip {...props} formatter={(value: any) => `${value} hrs`} />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="square"
                     formatter={() => 'Horas de Operación'}
@@ -640,21 +645,22 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {financialData.length > 0 ? (
                 <LineChart data={financialData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="mes" 
+                  <XAxis
+                    dataKey="mes"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
-                    content={(props) => <CustomTooltip {...props} formatter={(value: any, name: string) => 
+                  <Tooltip
+                    cursor={false}
+                    content={(props) => <CustomTooltip {...props} formatter={(value: any, name: string) =>
                       formatCLP(Number(value))
                     } />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px', color: isDarkMode ? '#E7E9EA' : '#0F1419' }}
                     iconType="line"
                   />
@@ -680,28 +686,29 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {financialData.length > 0 ? (
                 <AreaChart data={financialData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="mes" 
+                  <XAxis
+                    dataKey="mes"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
+                  <Tooltip
+                    cursor={false}
                     content={(props) => <CustomTooltip {...props} formatter={(value: any) => formatCLP(Number(value))} />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="square"
                     formatter={() => 'Utilidad'}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="utilidad" 
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
+                  <Area
+                    type="monotone"
+                    dataKey="utilidad"
+                    stroke="#3b82f6"
+                    fill="#3b82f6"
                     fillOpacity={0.3}
                     name="Utilidad"
                   />
@@ -730,21 +737,22 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {inventoryData.length > 0 ? (
                 <BarChart data={inventoryData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="categoria" 
+                  <XAxis
+                    dataKey="categoria"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
-                    content={(props) => <CustomTooltip {...props} formatter={(value: any, name: string) => 
+                  <Tooltip
+                    cursor={false}
+                    content={(props) => <CustomTooltip {...props} formatter={(value: any, name: string) =>
                       name === 'stock' ? value : formatCLP(Number(value))
                     } />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="square"
                     formatter={() => 'Stock'}
@@ -781,10 +789,10 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   content={(props) => <CustomTooltip {...props} />}
                 />
-                <Legend 
+                <Legend
                   wrapperStyle={{ paddingTop: '20px', color: isDarkMode ? '#E7E9EA' : '#0F1419' }}
                   iconType="circle"
                 />
@@ -799,32 +807,32 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
   // Calcular datos operacionales por mes
   const operationalData = useMemo(() => {
     const operationalByMonth: Record<string, { hectareas: number; productividad: number; total: number; completadas: number }> = {}
-    
+
     workOrders.forEach(order => {
-      const orderDate = order.actual_start_date 
-        ? new Date(order.actual_start_date) 
+      const orderDate = order.actual_start_date
+        ? new Date(order.actual_start_date)
         : new Date(order.planned_start_date)
-      
+
       // Si hay filtro de fecha, verificar; si no, incluir todos los datos
       if (dateRange && (orderDate < dateRange.startDate || orderDate > dateRange.endDate)) {
         return
       }
-      
+
       const monthKey = orderDate.toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
       if (!operationalByMonth[monthKey]) {
         operationalByMonth[monthKey] = { hectareas: 0, productividad: 0, total: 0, completadas: 0 }
       }
-      
+
       const hectares = order.actual_hectares || (order.target_hectares * (order.progress_percentage / 100)) || 0
       operationalByMonth[monthKey].hectareas += hectares
       operationalByMonth[monthKey].total += 1
-      
+
       // Calcular productividad: porcentaje de órdenes completadas
       if (order.status === 'completada') {
         operationalByMonth[monthKey].completadas += 1
       }
     })
-    
+
     let result = Object.entries(operationalByMonth)
       .map(([mes, data]) => {
         const productividad = data.total > 0 ? Math.round((data.completadas / data.total) * 100) : 0
@@ -835,24 +843,24 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         const dateB = new Date(`1 ${b.mes}`)
         return dateA.getTime() - dateB.getTime()
       })
-    
+
     // Si no hay datos en el rango filtrado, mostrar todos los datos disponibles
     if (result.length === 0 && workOrders.length > 0) {
       const allOperationalByMonth: Record<string, { hectareas: number; productividad: number; total: number; completadas: number }> = {}
       workOrders.forEach(order => {
-        const orderDate = order.actual_start_date 
-          ? new Date(order.actual_start_date) 
+        const orderDate = order.actual_start_date
+          ? new Date(order.actual_start_date)
           : new Date(order.planned_start_date)
-        
+
         const monthKey = orderDate.toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
         if (!allOperationalByMonth[monthKey]) {
           allOperationalByMonth[monthKey] = { hectareas: 0, productividad: 0, total: 0, completadas: 0 }
         }
-        
+
         const hectares = order.actual_hectares || (order.target_hectares * (order.progress_percentage / 100)) || 0
         allOperationalByMonth[monthKey].hectareas += hectares
         allOperationalByMonth[monthKey].total += 1
-        
+
         if (order.status === 'completada') {
           allOperationalByMonth[monthKey].completadas += 1
         }
@@ -868,27 +876,27 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
           return dateA.getTime() - dateB.getTime()
         })
     }
-    
+
     return result.slice(-6) // Últimos 6 meses
   }, [workOrders, dateRange])
 
   // Calcular datos de órdenes de trabajo por estado y mes
   const workOrdersByStatusData = useMemo(() => {
     const ordersByMonthStatus: Record<string, Record<string, number>> = {}
-    
+
     // Estados posibles de órdenes de trabajo (sin canceladas y detenidas)
     const statuses = ['completada', 'en_ejecucion', 'planificada', 'retrasada']
-    
+
     workOrders.forEach(order => {
-      const orderDate = order.actual_start_date 
-        ? new Date(order.actual_start_date) 
+      const orderDate = order.actual_start_date
+        ? new Date(order.actual_start_date)
         : new Date(order.planned_start_date)
-      
+
       // Si hay filtro de fecha, verificar; si no, incluir todos los datos
       if (dateRange && (orderDate < dateRange.startDate || orderDate > dateRange.endDate)) {
         return
       }
-      
+
       const monthKey = orderDate.toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
       if (!ordersByMonthStatus[monthKey]) {
         ordersByMonthStatus[monthKey] = {}
@@ -896,13 +904,13 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
           ordersByMonthStatus[monthKey][status] = 0
         })
       }
-      
+
       const status = order.status || 'planificada'
       if (ordersByMonthStatus[monthKey][status] !== undefined) {
         ordersByMonthStatus[monthKey][status] += 1
       }
     })
-    
+
     let result = Object.entries(ordersByMonthStatus)
       .map(([mes, statusCounts]) => ({
         mes,
@@ -917,15 +925,15 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         const dateB = new Date(`1 ${b.mes}`)
         return dateA.getTime() - dateB.getTime()
       })
-    
+
     // Si no hay datos en el rango filtrado, mostrar todos los datos disponibles
     if (result.length === 0 && workOrders.length > 0) {
       const allOrdersByMonthStatus: Record<string, Record<string, number>> = {}
       workOrders.forEach(order => {
-        const orderDate = order.actual_start_date 
-          ? new Date(order.actual_start_date) 
+        const orderDate = order.actual_start_date
+          ? new Date(order.actual_start_date)
           : new Date(order.planned_start_date)
-        
+
         const monthKey = orderDate.toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
         if (!allOrdersByMonthStatus[monthKey]) {
           allOrdersByMonthStatus[monthKey] = {}
@@ -933,13 +941,13 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
             allOrdersByMonthStatus[monthKey][status] = 0
           })
         }
-        
+
         const status = order.status || 'planificada'
         if (allOrdersByMonthStatus[monthKey][status] !== undefined) {
           allOrdersByMonthStatus[monthKey][status] += 1
         }
       })
-      
+
       result = Object.entries(allOrdersByMonthStatus)
         .map(([mes, statusCounts]) => ({
           mes,
@@ -955,7 +963,7 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
           return dateA.getTime() - dateB.getTime()
         })
     }
-    
+
     return result.slice(-6) // Últimos 6 meses
   }, [workOrders, dateRange])
 
@@ -971,27 +979,28 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {operationalData.length > 0 ? (
                 <LineChart data={operationalData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="mes" 
+                  <XAxis
+                    dataKey="mes"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
+                  <Tooltip
+                    cursor={false}
                     content={(props) => <CustomTooltip {...props} formatter={(value: any) => `${value}%`} />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="line"
                     formatter={() => 'Productividad (%)'}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="productividad" 
-                    stroke="#10b981" 
+                  <Line
+                    type="monotone"
+                    dataKey="productividad"
+                    stroke="#10b981"
                     strokeWidth={3}
                     dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
                     name="Productividad (%)"
@@ -1015,19 +1024,20 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
               {operationalData.length > 0 ? (
                 <BarChart data={operationalData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="mes" 
+                  <XAxis
+                    dataKey="mes"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   />
-                  <Tooltip 
+                  <Tooltip
+                    cursor={false}
                     content={(props) => <CustomTooltip {...props} formatter={(value: any) => `${value} ha`} />}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="square"
                     formatter={() => 'Hectáreas Procesadas'}
@@ -1054,23 +1064,24 @@ export function VisualAnalysis({ reportType, dateRange }: VisualAnalysisProps) {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
-              {workOrdersByStatusData.length > 0 ? (
+            {workOrdersByStatusData.length > 0 ? (
               <BarChart data={workOrdersByStatusData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                <XAxis 
-                  dataKey="mes" 
+                <XAxis
+                  dataKey="mes"
                   tick={{ fontSize: 12, fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                 />
-                <YAxis 
+                <YAxis
                   label={{ value: 'Cantidad de Órdenes', angle: -90, position: 'insideLeft', fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                   tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                 />
-                <Tooltip 
+                <Tooltip
+                  cursor={false}
                   content={(props) => <CustomTooltip {...props} />}
                 />
-                <Legend 
+                <Legend
                   wrapperStyle={{ paddingTop: '20px', color: isDarkMode ? '#E7E9EA' : '#0F1419' }}
                   iconType="square"
                   formatter={(value) => value}

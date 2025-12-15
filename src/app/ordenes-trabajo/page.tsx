@@ -19,11 +19,14 @@ import { Textarea } from '@/components/ui/Textarea'
 import { toast } from 'react-hot-toast'
 import { NewOrderModal, EditOrderModal } from './modals'
 
+import { useSearchParams } from 'next/navigation'
+
 export default function OrdenesTrabajoPage() {
+  const searchParams = useSearchParams()
   const { workOrders, deleteWorkOrder, addWorkOrder, updateWorkOrder, machinery } = useApp()
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -90,7 +93,7 @@ export default function OrdenesTrabajoPage() {
     const matchesStatus = order.status === statusFilter
 
     return matchesSearch && matchesStatus && matchesPriority
-  })
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   // Calcular paginación
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
@@ -462,9 +465,12 @@ export default function OrdenesTrabajoPage() {
                         <CardTitle className="text-base">{order.id}</CardTitle>
                       </div>
                     </div>
-                    <Badge variant={getStatusColor(order.status) as any} size="sm">
-                      {getStatusLabel(order.status)}
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-500 font-medium">{formatDate(order.created_at)}</span>
+                      <Badge variant={getStatusColor(order.status) as any} size="sm">
+                        {getStatusLabel(order.status)}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
 

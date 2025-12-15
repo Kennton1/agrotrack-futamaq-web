@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Truck } from 'lucide-react'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 interface LogoProps {
@@ -12,9 +12,9 @@ interface LogoProps {
   href?: string
 }
 
-export function Logo({ 
-  variant = 'default', 
-  showText = true, 
+export function Logo({
+  variant = 'default',
+  showText = true,
   size = 'md',
   className,
   href
@@ -26,7 +26,7 @@ export function Logo({
   }
 
   const currentSize = sizes[size]
-  
+
   const iconColors = {
     light: 'text-white',
     dark: 'text-primary-500',
@@ -50,7 +50,15 @@ export function Logo({
       'flex items-center',
       className
     )}>
-      <Truck className={cn(currentSize.icon, iconColors[variant])} />
+      <div className={cn('relative', currentSize.icon)}>
+        <Image
+          src="/images/logo-futamaq-new.png"
+          alt="Futamaq Logo"
+          fill
+          className="object-contain"
+          priority
+        />
+      </div>
       {showText && (
         <div className="ml-2 flex flex-col">
           <span className={cn('font-bold uppercase', currentSize.text, textColors[variant])}>

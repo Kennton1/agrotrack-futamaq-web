@@ -3,27 +3,60 @@
 import { useState } from 'react'
 import {
   Home, ClipboardList, Truck, Wrench, Fuel, Package,
-  BarChart3, Users, Settings, Bell, Search, Menu, X, LogOut, Activity
+  BarChart3, Users, Settings, Bell, Search, Menu, X, LogOut, Activity,
+  AlertTriangle, Briefcase, Layers, PieChart, Shield, Tractor
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import MobileNavigation from '@/components/mobile/MobileNavigation'
 import GlobalSearch from '@/components/search/GlobalSearch'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 
-const navigation = [
-  { name: 'Inicio', href: '/dashboard', icon: Home },
-  { name: 'Órdenes de Trabajo', href: '/ordenes-trabajo', icon: ClipboardList },
-  { name: 'Maquinarias', href: '/maquinarias', icon: Truck },
-  { name: 'Mantenimientos', href: '/mantenimientos', icon: Wrench },
-  { name: 'Combustible', href: '/combustible', icon: Fuel },
-  { name: 'Repuestos', href: '/repuestos', icon: Package },
-  { name: 'Reportes', href: '/reportes', icon: BarChart3 },
-  { name: 'Análisis', href: '/analisis', icon: Activity },
-  { name: 'Notificaciones', href: '/notificaciones', icon: Bell },
-  { name: 'Configuración', href: '/configuracion', icon: Settings },
-  { name: 'Usuarios', href: '/usuarios', icon: Users },
+const navigationGroups = [
+  {
+    title: 'OPERACIÓN',
+    icon: Briefcase,
+    items: [
+      { name: 'Inicio', href: '/dashboard', icon: Home },
+      { name: 'Órdenes de Trabajo', href: '/ordenes-trabajo', icon: ClipboardList },
+      { name: 'Incidencias', href: '/incidencias', icon: AlertTriangle },
+    ]
+  },
+  {
+    title: 'FLOTA',
+    icon: Tractor,
+    items: [
+      { name: 'Maquinarias', href: '/maquinarias', icon: Truck },
+      { name: 'Mantenimientos', href: '/mantenimientos', icon: Wrench },
+      { name: 'Combustible', href: '/combustible', icon: Fuel },
+    ]
+  },
+  {
+    title: 'INVENTARIO',
+    icon: Layers,
+    items: [
+      { name: 'Repuestos', href: '/repuestos', icon: Package },
+    ]
+  },
+  {
+    title: 'ANÁLISIS',
+    icon: PieChart,
+    items: [
+      { name: 'Reportes', href: '/reportes', icon: BarChart3 },
+      { name: 'Análisis', href: '/analisis', icon: Activity },
+    ]
+  },
+  {
+    title: 'ADMINISTRACIÓN',
+    icon: Shield,
+    items: [
+      { name: 'Usuarios', href: '/usuarios', icon: Users },
+      { name: 'Notificaciones', href: '/notificaciones', icon: Bell },
+      { name: 'Configuración', href: '/configuracion', icon: Settings },
+    ]
+  }
 ]
 
 interface AppLayoutProps {
@@ -95,14 +128,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <X className="h-6 w-6 text-white" />
             </button>
           </div>
-          <SidebarContent navigation={navigation} pathname={pathname} user={user} signOut={signOut} />
+          <SidebarContent pathname={pathname} user={user} signOut={signOut} />
         </div>
       </div>
 
       {/* Sidebar desktop */}
       <div className="hidden lg:flex lg:flex-shrink-0">
         <div className="flex flex-col w-64">
-          <SidebarContent navigation={navigation} pathname={pathname} user={user} signOut={signOut} />
+          <SidebarContent pathname={pathname} user={user} signOut={signOut} />
         </div>
       </div>
 
@@ -123,8 +156,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
                 {/* Logo y título extendido */}
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                    <Truck className="h-10 w-10 text-white" />
+                  <div className="p-2 bg-white/20 rounded-2xl backdrop-blur-sm relative h-16 w-16 overflow-hidden">
+                    <Image
+                      src="/images/logo-futamaq-new.png"
+                      alt="Futamaq Logo"
+                      fill
+                      className="object-contain"
+                      priority
+                    />
                   </div>
                   <div>
                     <h1 className="text-3xl font-bold text-white">FUTAMAQ</h1>
@@ -235,30 +274,42 @@ export default function AppLayout({ children }: AppLayoutProps) {
   )
 }
 
-function SidebarContent({ navigation, pathname, user, signOut }: { navigation: any[], pathname: string, user: any, signOut: any }) {
+function SidebarContent({ pathname, user, signOut }: { pathname: string, user: any, signOut: any }) {
   return (
-    <div className="flex flex-col h-full bg-white/95 backdrop-blur-lg border-r border-gray-200/50 shadow-xl">
-      {/* Navegación */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 ${isActive
-                ? 'bg-gradient-primary text-white shadow-lg transform scale-105'
-                : 'text-gray-600 hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50 hover:text-gray-900 hover:shadow-md hover:transform hover:scale-105'
-                }`}
-            >
-              <item.icon
-                className={`mr-3 h-5 w-5 flex-shrink-0 transition-transform duration-300 ${isActive ? 'animate-pulse' : 'group-hover:scale-110'
-                  }`}
-              />
-              {item.name}
-            </Link>
-          )
-        })}
+    <div className="flex flex-col h-full bg-white/95 backdrop-blur-lg border-r border-gray-200/50 shadow-xl overflow-y-auto">
+      {/* Navegación Agrupada */}
+      <nav className="flex-1 px-4 py-6 space-y-8">
+        {navigationGroups.map((group) => (
+          <div key={group.title}>
+            <div className="flex items-center px-4 mb-3 text-gray-400">
+              <group.icon className="w-4 h-4 mr-2" />
+              <h3 className="text-xs font-bold uppercase tracking-wider font-mono">
+                {group.title}
+              </h3>
+            </div>
+            <div className="space-y-1 ml-2">
+              {group.items.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 ${isActive
+                      ? 'bg-gradient-primary text-white shadow-lg transform scale-[1.02]'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-primary-600 hover:shadow-sm'
+                      }`}
+                  >
+                    <item.icon
+                      className={`mr-3 h-5 w-5 flex-shrink-0 transition-transform duration-300 ${isActive ? 'animate-pulse' : 'group-hover:scale-110'
+                        }`}
+                    />
+                    {item.name}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Usuario */}
