@@ -704,11 +704,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateMachinery = (id: number, updatedMachinery: Partial<Machinery>) => {
-    setMachinery(prev =>
-      prev.map(m => m.id === id ? { ...m, ...updatedMachinery } : m)
-    )
-    toast.success('Maquinaria actualizada exitosamente')
+  const updateMachinery = async (id: number, updatedMachinery: Partial<Machinery>) => {
+    try {
+      if (supabase) {
+        // Process images if they exist
+        let processedImages = updatedMachinery.images
+
+        if (processedImages && processedImages.length > 0) {
+          // Check if there are any new images (base64)
+          const hasNewImages = processedImages.some(img => img.url.startsWith('data:'))
+
+          if (hasNewImages) {
+            const toastId = toast.loading('Subiendo nuevas imágenes...')
+
+            processedImages = await Promise.all(processedImages.map(async (img) => {
+              if (img.url.startsWith('data:')) {
+                // Generate filename: machinery/TIMESTAMP_ID.EXT
+                const match = img.url.match(/^data:(image\/[a-z]+);base64,/)
+                const ext = match ? match[1].split('/')[1] : 'jpg'
+                const fileName = `machinery/${Date.now()}_${img.id}.${ext}`
+
+                const publicUrl = await uploadImageToSupabase(img.url, fileName)
+                if (publicUrl) {
+                  return { ...img, url: publicUrl }
+                }
+              }
+              return img
+            }))
+
+            toast.dismiss(toastId)
+          }
+        }
+
+        // Prepare update data
+        const updateData = { ...updatedMachinery }
+        if (processedImages) {
+          updateData.images = processedImages
+        }
+
+        const { data, error } = await supabase
+          .from('machinery')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setMachinery(prev =>
+          prev.map(m => m.id === id ? { ...m, ...data } : m)
+        )
+        toast.success('Maquinaria actualizada exitosamente')
+      } else {
+        // Fallback Local
+        setMachinery(prev =>
+          prev.map(m => m.id === id ? { ...m, ...updatedMachinery } : m)
+        )
+        toast.success('Maquinaria actualizada (Local)')
+      }
+    } catch (error: any) {
+      console.error('Error updating machinery:', error)
+      toast.error('Error al actualizar maquinaria: ' + error.message)
+
+      // Fallback local en caso de error
+      setMachinery(prev =>
+        prev.map(m => m.id === id ? { ...m, ...updatedMachinery } : m)
+      )
+    }
   }
 
   const deleteMachinery = async (id: number) => {
@@ -835,7 +897,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         console.log('Enviando orden a Supabase:', workOrderData)
 
-        let data, error;
+        let data: WorkOrder | null = null;
+        let error: any = null;
         try {
           const result = await supabase
             .from('work_orders')
@@ -843,7 +906,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             .select()
             .single()
 
-          data = result.data
+          data = result.data as WorkOrder
           error = result.error
         } catch (fetchError: any) {
           console.error("CRITICAL: Supabase INSERT failed with exception, falling back to local update:", fetchError)
@@ -980,8 +1043,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       // Intentar guardar en Supabase primero
       if (supabase) {
-        let data = null
-        let error = null
+        let data: Maintenance | null = null
+        let error: any = null
 
         try {
           const result = await supabase
@@ -990,7 +1053,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             .select()
             .single()
 
-          data = result.data
+          data = result.data as Maintenance
           error = result.error
         } catch (fetchError: any) {
           console.warn('Supabase fetch/network error:', fetchError)
