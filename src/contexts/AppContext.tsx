@@ -1207,6 +1207,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return maintenances.find(m => m.id === id)
   }
 
+  // Helper para limpiar el payload de combustible
+  const sanitizeFuelLoadPayload = (data: Partial<FuelLoad>) => {
+    const allowedColumns = [
+      'machinery_id', 'operator_id', 'operator', 'date', 'liters',
+      'total_cost', 'cost_per_liter', 'work_order_id', 'source',
+      'location', 'photos'
+    ]
+
+    const cleanPayload: any = {}
+
+    Object.keys(data).forEach(key => {
+      if (allowedColumns.includes(key)) {
+        cleanPayload[key] = (data as any)[key]
+      }
+    })
+
+    return cleanPayload
+  }
+
   // Funciones de combustible
   const addFuelLoad = async (newFuelLoad: Omit<FuelLoad, 'id' | 'created_at'>) => {
     try {
@@ -1236,10 +1255,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           toast.dismiss(toastId)
         }
 
-        // Sanitize payload to remove legacy fields that don't exist in DB
-        const payload = { ...newFuelLoad }
-        delete (payload as any).fuel_load_image
-        delete (payload as any).receipt_image
+        // Sanitize payload using whitelist
+        const payload = sanitizeFuelLoadPayload(newFuelLoad)
 
         const { data, error } = await supabase
           .from('fuel_loads')
@@ -1304,10 +1321,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Sanitize payload
-        const payload = { ...updatedFuelLoad }
-        delete (payload as any).fuel_load_image
-        delete (payload as any).receipt_image
+        // Sanitize payload using whitelist
+        const payload = sanitizeFuelLoadPayload(updatedFuelLoad)
 
         const { data, error } = await supabase
           .from('fuel_loads')
