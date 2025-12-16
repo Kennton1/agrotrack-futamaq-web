@@ -500,9 +500,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error('Error fetching data:', error)
 
-      // Auto-fix for 431 Request Header Fields Too Large
-      if (error?.message?.includes('431') || JSON.stringify(error).includes('431')) {
-        console.warn('⚠️ DETECTADO ERROR 431 - Limpiando sesión corrupta...')
+      // Auto-fix for 431/400 errors (Header too large / Bad Request)
+      const errorStr = JSON.stringify(error)
+      if (error?.message?.includes('431') || errorStr.includes('431') ||
+        error?.message?.includes('400') || errorStr.includes('Bad Request')) {
+        console.warn('⚠️ DETECTADO ERROR CRÍTICO DE SESIÓN (431/400) - Limpiando sesión corrupta...')
 
         if (typeof window !== 'undefined') {
           localStorage.clear()
