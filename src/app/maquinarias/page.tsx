@@ -392,7 +392,7 @@ export default function MaquinariasPage() {
                     <img
                       src={item.images[0]?.url || ''}
                       alt={item.images[0]?.alt || `${item.brand} ${item.model}`}
-                      className="max-w-full max-h-full object-contain"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                 ) : (
