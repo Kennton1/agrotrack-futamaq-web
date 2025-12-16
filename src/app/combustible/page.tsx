@@ -1628,382 +1628,390 @@ function EditFuelLoadModal({
   })
 
   useEffect(() => {
-    location: fuelLoad.location || '',
+    reset({
+      machinery_id: fuelLoad.machinery_id,
+      operator_id: fuelLoad.operator_id || fuelLoad.operator,
+      date: fuelLoad.date,
+      liters: fuelLoad.liters,
+      cost_per_liter: fuelLoad.cost_per_liter,
+      work_order_id: fuelLoad.work_order_id || '',
+      source: fuelLoad.source,
+      location: fuelLoad.location || '',
     })
 
-  // Initialize images from photos array if available, fallback to legacy fields
-  const loadPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Foto de Carga')
-  const receiptPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Boleta')
+    // Initialize images from photos array if available, fallback to legacy fields
+    const loadPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Foto de Carga')
+    const receiptPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Boleta')
 
-  setFuelLoadImage(loadPhoto?.url || fuelLoad.fuel_load_image)
-  setReceiptImage(receiptPhoto?.url || fuelLoad.receipt_image)
-}, [fuelLoad, reset])
+    setFuelLoadImage(loadPhoto?.url || fuelLoad.fuel_load_image)
+    setReceiptImage(receiptPhoto?.url || fuelLoad.receipt_image)
+  }, [fuelLoad, reset])
 
-const liters = watch('liters')
-const costPerLiter = watch('cost_per_liter')
-const totalCost = liters * costPerLiter
+  const liters = watch('liters')
+  const costPerLiter = watch('cost_per_liter')
+  const totalCost = liters * costPerLiter
 
-const onSubmit = (data: any) => {
-  const selectedMachinery = machinery.find(m => m.id === data.machinery_id)
-  if (!selectedMachinery) {
-    toast.error('Maquinaria seleccionada no encontrada')
-    return
-  }
-
-  const updatedFuelLoad = {
-    ...fuelLoad,
-    machinery_id: data.machinery_id,
-    machinery_code: `${selectedMachinery.brand} ${selectedMachinery.model}`,
-    operator_id: data.operator_id,
-    operator: data.operator_id,
-    date: data.date,
-    liters: data.liters,
-    total_cost: totalCost,
-    cost_per_liter: data.cost_per_liter,
-    work_order_id: data.work_order_id || null,
-    source: data.source,
-    location: data.location,
-  }
-
-  // Transform images to photos array
-  const photos: FuelFile[] = []
-
-  // Preserve existing photos unless replaced
-  const existingLoadPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Foto de Carga')
-  const existingReceiptPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Boleta')
-
-  if (fuelLoadImage) {
-    if (existingLoadPhoto && existingLoadPhoto.url === fuelLoadImage) {
-      photos.push(existingLoadPhoto)
-    } else {
-      photos.push({
-        id: existingLoadPhoto?.id || `fuel_load_${Date.now()}`,
-        url: fuelLoadImage,
-        type: 'image',
-        name: 'Foto de Carga'
-      })
+  const onSubmit = (data: any) => {
+    const selectedMachinery = machinery.find(m => m.id === data.machinery_id)
+    if (!selectedMachinery) {
+      toast.error('Maquinaria seleccionada no encontrada')
+      return
     }
-  }
 
-  if (receiptImage) {
-    if (existingReceiptPhoto && existingReceiptPhoto.url === receiptImage) {
-      photos.push(existingReceiptPhoto)
-    } else {
-      const isPdf = receiptImage.startsWith('data:application/pdf') || receiptImage.toLowerCase().endsWith('.pdf')
-      photos.push({
-        id: existingReceiptPhoto?.id || `receipt_${Date.now()}`,
-        url: receiptImage,
-        type: isPdf ? 'document' : 'image',
-        name: 'Boleta'
-      })
+    const updatedFuelLoad = {
+      ...fuelLoad,
+      machinery_id: data.machinery_id,
+      machinery_code: `${selectedMachinery.brand} ${selectedMachinery.model}`,
+      operator_id: data.operator_id,
+      operator: data.operator_id,
+      date: data.date,
+      liters: data.liters,
+      total_cost: totalCost,
+      cost_per_liter: data.cost_per_liter,
+      work_order_id: data.work_order_id || null,
+      source: data.source,
+      location: data.location,
     }
+
+    // Transform images to photos array
+    const photos: FuelFile[] = []
+
+    // Preserve existing photos unless replaced
+    const existingLoadPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Foto de Carga')
+    const existingReceiptPhoto = fuelLoad.photos?.find((p: FuelFile) => p.name === 'Boleta')
+
+    if (fuelLoadImage) {
+      if (existingLoadPhoto && existingLoadPhoto.url === fuelLoadImage) {
+        photos.push(existingLoadPhoto)
+      } else {
+        photos.push({
+          id: existingLoadPhoto?.id || `fuel_load_${Date.now()}`,
+          url: fuelLoadImage,
+          type: 'image',
+          name: 'Foto de Carga'
+        })
+      }
+    }
+
+    if (receiptImage) {
+      if (existingReceiptPhoto && existingReceiptPhoto.url === receiptImage) {
+        photos.push(existingReceiptPhoto)
+      } else {
+        const isPdf = receiptImage.startsWith('data:application/pdf') || receiptImage.toLowerCase().endsWith('.pdf')
+        photos.push({
+          id: existingReceiptPhoto?.id || `receipt_${Date.now()}`,
+          url: receiptImage,
+          type: isPdf ? 'document' : 'image',
+          name: 'Boleta'
+        })
+      }
+    }
+
+    updateFuelLoad(fuelLoad.id, { ...updatedFuelLoad, photos })
+    toast.success('Carga de combustible actualizada exitosamente!')
+    onClose()
   }
 
-  updateFuelLoad(fuelLoad.id, { ...updatedFuelLoad, photos })
-  toast.success('Carga de combustible actualizada exitosamente!')
-  onClose()
-}
-
-return (
-  <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="max-w-6xl w-full mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-      {/* Header mejorado */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-t-2xl">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative p-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-              <Fuel className="h-7 w-7 text-white" />
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="max-w-6xl w-full mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        {/* Header mejorado */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-t-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative p-6 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                <Fuel className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white mb-1">Editar Carga de Combustible</h1>
+                <p className="text-blue-100 text-sm">Actualiza la información de la carga de combustible</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-1">Editar Carga de Combustible</h1>
-              <p className="text-blue-100 text-sm">Actualiza la información de la carga de combustible</p>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
-      </div>
 
-      <div className="p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* Información Principal */}
-          <div className="space-y-6">
-            <div className="flex items-center space-x-2 pb-4 border-b border-gray-200 dark:border-gray-700">
-              <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Información Principal</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Maquinaria */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_machinery_id" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <Truck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Maquinaria</span>
-                </Label>
-                <Controller
-                  name="machinery_id"
-                  control={control}
-                  render={({ field }) => {
-                    const selectedMachinery = machinery.find(m => m.id === field.value)
-                    return (
-                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value > 0 ? field.value.toString() : undefined}>
-                        <SelectTrigger className={`h-11 ${errors.machinery_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
-                          {selectedMachinery ? (
-                            <span className="text-gray-900 dark:text-white">{selectedMachinery.brand} {selectedMachinery.model} ({selectedMachinery.patent})</span>
-                          ) : (
-                            <SelectValue placeholder="Selecciona una maquinaria" className="dark:text-gray-400" />
-                          )}
+        <div className="p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {/* Información Principal */}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-2 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Información Principal</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Maquinaria */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_machinery_id" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <Truck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Maquinaria</span>
+                  </Label>
+                  <Controller
+                    name="machinery_id"
+                    control={control}
+                    render={({ field }) => {
+                      const selectedMachinery = machinery.find(m => m.id === field.value)
+                      return (
+                        <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value > 0 ? field.value.toString() : undefined}>
+                          <SelectTrigger className={`h-11 ${errors.machinery_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
+                            {selectedMachinery ? (
+                              <span className="text-gray-900 dark:text-white">{selectedMachinery.brand} {selectedMachinery.model} ({selectedMachinery.patent})</span>
+                            ) : (
+                              <SelectValue placeholder="Selecciona una maquinaria" className="dark:text-gray-400" />
+                            )}
+                          </SelectTrigger>
+                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                            {machinery.map((mach) => (
+                              <SelectItem key={mach.id} value={mach.id.toString()} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
+                                {mach.brand} {mach.model} ({mach.patent})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )
+                    }}
+                  />
+                  {errors.machinery_id && <p className="text-red-500 text-sm mt-1 flex items-center space-x-1"><AlertTriangle className="h-3 w-3" /><span>{errors.machinery_id.message as string}</span></p>}
+                </div>
+
+                {/* Operador */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_operator_id" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Operador</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="edit_operator_id"
+                      {...register('operator_id')}
+                      placeholder="Ej: Carlos Muñoz"
+                      className={`h-11 pl-10 ${errors.operator_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                    />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  {errors.operator_id && <p className="text-red-500 text-sm mt-1">{errors.operator_id.message as string}</p>}
+                </div>
+
+                {/* Fecha */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_date" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Fecha</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="edit_date"
+                      type="date"
+                      {...register('date')}
+                      className={`h-11 pl-10 ${errors.date ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                    />
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
+                  {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date.message as string}</p>}
+                </div>
+
+                {/* Fuente */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_source" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Fuente</span>
+                  </Label>
+                  <Controller
+                    name="source"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className={`h-11 ${errors.source ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
+                          <SelectValue placeholder="Selecciona una fuente" className="dark:text-gray-400" />
                         </SelectTrigger>
                         <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                          {machinery.map((mach) => (
-                            <SelectItem key={mach.id} value={mach.id.toString()} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
-                              {mach.brand} {mach.model} ({mach.patent})
+                          <SelectItem value="bodega" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Bodega</SelectItem>
+                          <SelectItem value="estacion" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Estación de Servicio</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.source && <p className="text-red-500 text-sm mt-1">{errors.source.message as string}</p>}
+                </div>
+
+                {/* Litros */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_liters" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <Fuel className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Litros</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="edit_liters"
+                      type="number"
+                      step="0.1"
+                      {...register('liters', { valueAsNumber: true })}
+                      placeholder="Ej: 150.5"
+                      className={`h-11 pl-10 ${errors.liters ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                    />
+                    <Fuel className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  {errors.liters && <p className="text-red-500 text-sm mt-1">{errors.liters.message as string}</p>}
+                </div>
+
+                {/* Costo por Litro */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_cost_per_liter" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Costo por Litro ($)</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="edit_cost_per_liter"
+                      type="number"
+                      {...register('cost_per_liter', { valueAsNumber: true })}
+                      placeholder="Ej: 1300"
+                      className={`h-11 pl-10 ${errors.cost_per_liter ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                    />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  {errors.cost_per_liter && <p className="text-red-500 text-sm mt-1">{errors.cost_per_liter.message as string}</p>}
+                </div>
+
+                {/* Orden de Trabajo (Opcional) */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_work_order_id" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Orden de Trabajo (Opcional)</span>
+                  </Label>
+                  <Controller
+                    name="work_order_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                          <SelectValue placeholder="Selecciona una orden de trabajo" className="dark:text-gray-400" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                          <SelectItem value="" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Sin orden de trabajo</SelectItem>
+                          {workOrders.map((wo) => (
+                            <SelectItem key={wo.id} value={wo.id} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
+                              {wo.id} - {wo.field_name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    )
-                  }}
-                />
-                {errors.machinery_id && <p className="text-red-500 text-sm mt-1 flex items-center space-x-1"><AlertTriangle className="h-3 w-3" /><span>{errors.machinery_id.message as string}</span></p>}
-              </div>
-
-              {/* Operador */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_operator_id" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Operador</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="edit_operator_id"
-                    {...register('operator_id')}
-                    placeholder="Ej: Carlos Muñoz"
-                    className={`h-11 pl-10 ${errors.operator_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                    )}
                   />
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
-                {errors.operator_id && <p className="text-red-500 text-sm mt-1">{errors.operator_id.message as string}</p>}
-              </div>
 
-              {/* Fecha */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_date" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Fecha</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="edit_date"
-                    type="date"
-                    {...register('date')}
-                    className={`h-11 pl-10 ${errors.date ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                  />
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                </div>
-                {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date.message as string}</p>}
-              </div>
-
-              {/* Fuente */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_source" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Fuente</span>
-                </Label>
-                <Controller
-                  name="source"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className={`h-11 ${errors.source ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
-                        <SelectValue placeholder="Selecciona una fuente" className="dark:text-gray-400" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        <SelectItem value="bodega" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Bodega</SelectItem>
-                        <SelectItem value="estacion" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Estación de Servicio</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.source && <p className="text-red-500 text-sm mt-1">{errors.source.message as string}</p>}
-              </div>
-
-              {/* Litros */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_liters" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <Fuel className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Litros</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="edit_liters"
-                    type="number"
-                    step="0.1"
-                    {...register('liters', { valueAsNumber: true })}
-                    placeholder="Ej: 150.5"
-                    className={`h-11 pl-10 ${errors.liters ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                  />
-                  <Fuel className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-                {errors.liters && <p className="text-red-500 text-sm mt-1">{errors.liters.message as string}</p>}
-              </div>
-
-              {/* Costo por Litro */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_cost_per_liter" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Costo por Litro ($)</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="edit_cost_per_liter"
-                    type="number"
-                    {...register('cost_per_liter', { valueAsNumber: true })}
-                    placeholder="Ej: 1300"
-                    className={`h-11 pl-10 ${errors.cost_per_liter ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                  />
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-                {errors.cost_per_liter && <p className="text-red-500 text-sm mt-1">{errors.cost_per_liter.message as string}</p>}
-              </div>
-
-              {/* Orden de Trabajo (Opcional) */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_work_order_id" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Orden de Trabajo (Opcional)</span>
-                </Label>
-                <Controller
-                  name="work_order_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                        <SelectValue placeholder="Selecciona una orden de trabajo" className="dark:text-gray-400" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        <SelectItem value="" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Sin orden de trabajo</SelectItem>
-                        {workOrders.map((wo) => (
-                          <SelectItem key={wo.id} value={wo.id} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
-                            {wo.id} - {wo.field_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-
-              {/* Ubicación */}
-              <div className="space-y-2">
-                <Label htmlFor="edit_location" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Ubicación</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="edit_location"
-                    {...register('location')}
-                    placeholder="Ej: Base FUTAMAQ, Valdivia"
-                    className={`h-11 pl-10 ${errors.location ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                  />
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-                {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location.message as string}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Resumen de Costo Mejorado */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-700 dark:via-gray-700 dark:to-gray-700 rounded-xl border border-blue-200/50 dark:border-gray-600/50 shadow-lg">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 dark:bg-blue-900/20 rounded-full -mr-16 -mt-16"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-200/20 dark:bg-indigo-900/20 rounded-full -ml-12 -mb-12"></div>
-            <div className="relative p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-2 bg-blue-600 dark:bg-blue-600 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-white" />
-                </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Resumen de Costo</h4>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white/60 dark:bg-gray-600/60 backdrop-blur-sm rounded-lg p-4 border border-white/80 dark:border-gray-500/80">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Litros</p>
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{liters || 0} L</p>
-                </div>
-                <div className="bg-white/60 dark:bg-gray-600/60 backdrop-blur-sm rounded-lg p-4 border border-white/80 dark:border-gray-500/80">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Costo por Litro</p>
-                  <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">${costPerLiter || 0}</p>
-                </div>
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-lg p-4 text-white shadow-lg">
-                  <p className="text-sm text-blue-100 mb-1">Total</p>
-                  <p className="text-2xl font-bold">{formatCLP(totalCost)}</p>
+                {/* Ubicación */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit_location" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span>Ubicación</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="edit_location"
+                      {...register('location')}
+                      placeholder="Ej: Base FUTAMAQ, Valdivia"
+                      className={`h-11 pl-10 ${errors.location ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                    />
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location.message as string}</p>}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Sección de Imágenes Mejorada */}
-          <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-2 pb-2">
-              <Camera className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Registro Fotográfico</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Foto de la Carga de Combustible */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-6 border border-blue-100 dark:border-gray-600">
-                <FuelImageUpload
-                  label="Foto de la Carga de Combustible"
-                  imageUrl={fuelLoadImage}
-                  onChange={setFuelLoadImage}
-                  type="fuel_load"
-                />
-                <p className="text-xs text-gray-600 dark:text-gray-300 mt-3 flex items-start space-x-1">
-                  <span className="text-blue-600 dark:text-blue-400">💡</span>
-                  <span>Toma una foto del medidor o indicador para verificar la cantidad de combustible cargado</span>
-                </p>
-              </div>
-
-              {/* Foto/Archivo de la Boleta */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-6 border border-green-100 dark:border-gray-600">
-                <FuelImageUpload
-                  label="Foto o Archivo PDF de la Boleta (Opcional)"
-                  imageUrl={receiptImage}
-                  onChange={setReceiptImage}
-                  type="receipt"
-                />
-                <p className="text-xs text-gray-600 dark:text-gray-300 mt-3 flex items-start space-x-1">
-                  <span className="text-green-600 dark:text-green-400">💡</span>
-                  <span>Sube una foto o archivo PDF de la boleta o comprobante de pago del combustible</span>
-                </p>
+            {/* Resumen de Costo Mejorado */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-700 dark:via-gray-700 dark:to-gray-700 rounded-xl border border-blue-200/50 dark:border-gray-600/50 shadow-lg">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 dark:bg-blue-900/20 rounded-full -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-200/20 dark:bg-indigo-900/20 rounded-full -ml-12 -mb-12"></div>
+              <div className="relative p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <div className="p-2 bg-blue-600 dark:bg-blue-600 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-white" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Resumen de Costo</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white/60 dark:bg-gray-600/60 backdrop-blur-sm rounded-lg p-4 border border-white/80 dark:border-gray-500/80">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Litros</p>
+                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{liters || 0} L</p>
+                  </div>
+                  <div className="bg-white/60 dark:bg-gray-600/60 backdrop-blur-sm rounded-lg p-4 border border-white/80 dark:border-gray-500/80">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Costo por Litro</p>
+                    <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">${costPerLiter || 0}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-lg p-4 text-white shadow-lg">
+                    <p className="text-sm text-blue-100 mb-1">Total</p>
+                    <p className="text-2xl font-bold">{formatCLP(totalCost)}</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Botones de Acción Mejorados */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 h-11 text-sm font-semibold rounded-xl border-2 border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105 hover:shadow-md"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-8 h-11 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl text-white transition-all duration-200 hover:scale-105 hover:shadow-md flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              Guardar Cambios
-            </button>
-          </div>
-        </form>
+            {/* Sección de Imágenes Mejorada */}
+            <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-2 pb-2">
+                <Camera className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Registro Fotográfico</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Foto de la Carga de Combustible */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-6 border border-blue-100 dark:border-gray-600">
+                  <FuelImageUpload
+                    label="Foto de la Carga de Combustible"
+                    imageUrl={fuelLoadImage}
+                    onChange={setFuelLoadImage}
+                    type="fuel_load"
+                  />
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-3 flex items-start space-x-1">
+                    <span className="text-blue-600 dark:text-blue-400">💡</span>
+                    <span>Toma una foto del medidor o indicador para verificar la cantidad de combustible cargado</span>
+                  </p>
+                </div>
+
+                {/* Foto/Archivo de la Boleta */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-6 border border-green-100 dark:border-gray-600">
+                  <FuelImageUpload
+                    label="Foto o Archivo PDF de la Boleta (Opcional)"
+                    imageUrl={receiptImage}
+                    onChange={setReceiptImage}
+                    type="receipt"
+                  />
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-3 flex items-start space-x-1">
+                    <span className="text-green-600 dark:text-green-400">💡</span>
+                    <span>Sube una foto o archivo PDF de la boleta o comprobante de pago del combustible</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de Acción Mejorados */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 h-11 text-sm font-semibold rounded-xl border-2 border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105 hover:shadow-md"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-8 h-11 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl text-white transition-all duration-200 hover:scale-105 hover:shadow-md flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Guardar Cambios
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
 }
