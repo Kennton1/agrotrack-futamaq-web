@@ -92,14 +92,14 @@ export function FuelLoadCard({ load, machinery = [], onView, onEdit, onDelete }:
           </div>
         )}
 
-        {(load.fuel_load_image || load.receipt_image) && (
+        {(load.fuel_load_image || load.receipt_image || (load.photos && load.photos.length > 0)) && (
           <div className="flex items-center space-x-2">
-            {load.fuel_load_image && (
+            {(load.fuel_load_image || load.photos?.some(p => p.name === 'Foto de Carga')) && (
               <div className="p-1 rounded-full bg-blue-100 text-blue-600" title="Foto de carga disponible">
                 <ImageIcon className="h-3 w-3" />
               </div>
             )}
-            {load.receipt_image && (
+            {(load.receipt_image || load.photos?.some(p => p.name === 'Boleta')) && (
               <div className="p-1 rounded-full bg-green-100 text-green-600" title="Boleta disponible">
                 <Receipt className="h-3 w-3" />
               </div>

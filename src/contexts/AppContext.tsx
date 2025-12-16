@@ -109,6 +109,14 @@ export interface FuelLoad {
   work_order_id?: string | null
   source?: 'bodega' | 'estacion'
   location?: string
+  photos?: FuelFile[]
+}
+
+export interface FuelFile {
+  id: string
+  url: string
+  type: 'image' | 'document'
+  name: string
 }
 
 export interface User {
@@ -1203,9 +1211,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addFuelLoad = async (newFuelLoad: Omit<FuelLoad, 'id' | 'created_at'>) => {
     try {
       if (supabase) {
+        // Process photos/documents if any
+        let processedPhotos = newFuelLoad.photos || []
+
+        if (processedPhotos.length > 0) {
+          const toastId = toast.loading('Subiendo archivos...')
+
+          processedPhotos = await Promise.all(processedPhotos.map(async (file) => {
+            if (file.url.startsWith('data:')) {
+              // Extract extension and mime type
+              const mimeType = file.url.split(';')[0].split(':')[1]
+              const extension = mimeType.split('/')[1] === 'jpeg' ? 'jpg' : mimeType.split('/')[1]
+              // Use timestamp and sanitized filename
+              const fileName = `fuel/${Date.now()}_${file.id.replace(/[^a-zA-Z0-9-_]/g, '')}.${extension}`
+
+              const publicUrl = await uploadImageToSupabase(file.url, fileName)
+              if (publicUrl) {
+                return { ...file, url: publicUrl }
+              }
+            }
+            return file
+          }))
+
+          toast.dismiss(toastId)
+        }
+
         const { data, error } = await supabase
           .from('fuel_loads')
-          .insert([newFuelLoad])
+          .insert([{
+            ...newFuelLoad,
+            photos: processedPhotos
+          }])
           .select()
           .single()
 
@@ -1228,11 +1264,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateFuelLoad = (id: number, updatedFuelLoad: Partial<FuelLoad>) => {
-    setFuelLoads(prev =>
-      prev.map(f => f.id === id ? { ...f, ...updatedFuelLoad } : f)
-    )
-    toast.success('Carga de combustible actualizada exitosamente')
+  const updateFuelLoad = async (id: number, updatedFuelLoad: Partial<FuelLoad>) => {
+    try {
+      if (supabase) {
+        // Process photos if present
+        let processedPhotos = updatedFuelLoad.photos
+
+        if (processedPhotos && processedPhotos.length > 0) {
+          // Check if any need upload
+          const needsUpload = processedPhotos.some(p => p.url.startsWith('data:'))
+
+          if (needsUpload) {
+            const toastId = toast.loading('Subiendo archivos actualizados...')
+
+            processedPhotos = await Promise.all(processedPhotos.map(async (file) => {
+              if (file.url.startsWith('data:')) {
+                const mimeType = file.url.split(';')[0].split(':')[1]
+                const extension = mimeType.split('/')[1] === 'jpeg' ? 'jpg' : mimeType.split('/')[1]
+                const fileName = `fuel/${Date.now()}_${file.id.replace(/[^a-zA-Z0-9-_]/g, '')}.${extension}`
+
+                const publicUrl = await uploadImageToSupabase(file.url, fileName)
+                if (publicUrl) {
+                  return { ...file, url: publicUrl }
+                }
+                // If upload fails, filter it out later
+                return null as any
+              }
+              return file
+            }))
+
+            // Filter failed uploads
+            processedPhotos = processedPhotos.filter(p => p !== null)
+            toast.dismiss(toastId)
+          }
+        }
+
+        const { data, error } = await supabase
+          .from('fuel_loads')
+          .update({
+            ...updatedFuelLoad,
+            ...(processedPhotos && { photos: processedPhotos })
+          })
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setFuelLoads(prev =>
+          prev.map(f => f.id === id ? (data as FuelLoad) : f)
+        )
+        toast.success('Carga de combustible actualizada exitosamente')
+      } else {
+        setFuelLoads(prev =>
+          prev.map(f => f.id === id ? { ...f, ...updatedFuelLoad } : f)
+        )
+        toast.success('Carga de combustible actualizada (Local)')
+      }
+    } catch (error: any) {
+      console.error('Error updating fuel load:', error)
+      toast.error('Error al actualizar carga: ' + error.message)
+    }
   }
 
   const deleteFuelLoad = (id: number) => {
