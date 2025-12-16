@@ -1236,10 +1236,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           toast.dismiss(toastId)
         }
 
+        // Sanitize payload to remove legacy fields that don't exist in DB
+        const payload = { ...newFuelLoad }
+        delete (payload as any).fuel_load_image
+        delete (payload as any).receipt_image
+
         const { data, error } = await supabase
           .from('fuel_loads')
           .insert([{
-            ...newFuelLoad,
+            ...payload,
             photos: processedPhotos
           }])
           .select()
@@ -1299,10 +1304,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // Sanitize payload
+        const payload = { ...updatedFuelLoad }
+        delete (payload as any).fuel_load_image
+        delete (payload as any).receipt_image
+
         const { data, error } = await supabase
           .from('fuel_loads')
           .update({
-            ...updatedFuelLoad,
+            ...payload,
             ...(processedPhotos && { photos: processedPhotos })
           })
           .eq('id', id)
