@@ -8,7 +8,7 @@ import {
   Bell, CheckCircle, XCircle, AlertTriangle, Info,
   Clock, Mail, MessageSquare, Truck, Wrench, Fuel,
   Package, Filter, Search, Check, Trash2,
-  Settings, RefreshCw, Archive, AlertCircle, Eye, MapPin, X
+  Settings, RefreshCw, Archive, AlertCircle, Eye, MapPin, X, Image as ImageIcon
 } from 'lucide-react'
 import { formatDate, formatTime } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
@@ -43,11 +43,12 @@ interface Incident {
   location?: string
   resolution?: string
   resolvedAt?: string
+  photos?: string[]
   images?: string[]
 }
 
 export default function NotificacionesPage() {
-  const { machinery, notifications: appNotifications, incidents: appIncidents, markNotificationAsRead } = useApp()
+  const { machinery, notifications: appNotifications, incidents: appIncidents, markNotificationAsRead, markAllAsRead: contextMarkAllAsRead } = useApp()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,132 +73,36 @@ export default function NotificacionesPage() {
       relatedId: 0
     }))
 
-    // Combinar con mock data si es necesario, o reemplazar.
-    // Para este caso, vamos a usar los datos reales + mocks para que no se vea vacío si no hay datos reales aún
-    // Pero lo ideal es usar solo reales. Vamos a dejar los mocks iniciales y añadir los reales al principio.
-
-    // Mock data original para rellenar
-    const initialNotifications: Notification[] = [
-      {
-        id: 1,
-        type: 'warning',
-        category: 'maintenance',
-        title: 'Mantenimiento Programado',
-        message: 'El tractor T001 requiere mantenimiento preventivo en las próximas 24 horas',
-        isRead: false,
-        createdAt: '2024-03-25T07:30:00Z',
-        priority: 'high',
-        actionRequired: true,
-        actionUrl: '/mantenimientos',
-        relatedId: 1
-      },
-      {
-        id: 2,
-        type: 'error',
-        category: 'fuel',
-        title: 'Consumo Anómalo de Combustible',
-        message: 'El tractor T002 ha consumido 50% más combustible de lo normal en las últimas 2 horas',
-        isRead: false,
-        createdAt: '2024-03-25T09:15:00Z',
-        priority: 'critical',
-        actionRequired: true,
-        actionUrl: '/combustible',
-        relatedId: 2
-      },
-      {
-        id: 3,
-        type: 'warning',
-        category: 'stock',
-        title: 'Stock Bajo de Repuestos',
-        message: 'Filtro de aceite motor (FIL-001) está por debajo del stock mínimo',
-        isRead: true,
-        createdAt: '2024-03-25T08:45:00Z',
-        priority: 'medium',
-        actionRequired: true,
-        actionUrl: '/repuestos',
-        relatedId: 1
-      },
-      {
-        id: 4,
-        type: 'success',
-        category: 'work_order',
-        title: 'Orden de Trabajo Completada',
-        message: 'La orden OT-2024-001 ha sido completada exitosamente',
-        isRead: true,
-        createdAt: '2024-03-25T07:20:00Z',
-        priority: 'low',
-        actionRequired: false,
-        actionUrl: '/ordenes-trabajo',
-        relatedId: 1
-      },
-      {
-        id: 5,
-        type: 'info',
-        category: 'system',
-        title: 'Respaldo Completado',
-        message: 'El respaldo automático de la base de datos se completó exitosamente',
-        isRead: true,
-        createdAt: '2024-03-25T06:00:00Z',
-        priority: 'low',
-        actionRequired: false
-      },
-      {
-        id: 6,
-        type: 'warning',
-        category: 'machinery',
-        title: 'Maquinaria Fuera de Servicio',
-        message: 'El pulverizador PUL001 ha sido marcado como fuera de servicio',
-        isRead: false,
-        createdAt: '2024-03-24T16:30:00Z',
-        priority: 'high',
-        actionRequired: true,
-        actionUrl: '/maquinarias',
-        relatedId: 6
-      },
-      {
-        id: 7,
-        type: 'info',
-        category: 'fuel',
-        title: 'Carga de Combustible Registrada',
-        message: 'Se registró una carga de 150L de combustible para el tractor T001',
-        isRead: true,
-        createdAt: '2024-03-24T14:15:00Z',
-        priority: 'low',
-        actionRequired: false,
-        actionUrl: '/combustible',
-        relatedId: 1
-      },
-      {
-        id: 8,
-        type: 'error',
-        category: 'system',
-        title: 'Error de Conexión',
-        message: 'Se perdió la conexión con el servidor de ubicación GPS',
-        isRead: false,
-        createdAt: '2024-03-24T12:00:00Z',
-        priority: 'critical',
-        actionRequired: true
-      }
-    ];
-
-    setNotifications([...mappedNotifications, ...initialNotifications.filter(m => !mappedNotifications.some(rn => rn.title === m.title))])
+    setNotifications(mappedNotifications)
 
     // Mapear incidentes reales
     const mappedIncidents: Incident[] = appIncidents.map((inc: any) => ({
       id: inc.id,
       title: inc.title,
       description: inc.description || '',
-      type: inc.type || 'other',
-      severity: inc.severity || 'medium',
-      status: inc.status || 'open',
       reportedBy: inc.reporter_id || 'Usuario',
       reportedAt: inc.created_at,
       assignedTo: inc.assigned_to,
       machineryId: inc.machinery_id,
-      machineryCode: 'MAQ-' + inc.machinery_id, // Placeholder
-      location: 'Ubicación registrada',
+      machineryCode: inc.machinery_id ? 'MAQ-' + inc.machinery_id : undefined,
+      location: inc.location ? (typeof inc.location === 'string' ? inc.location : inc.location.address || 'Ubicación') : 'Sin ubicación',
       resolution: inc.resolution,
-      resolvedAt: inc.resolved_at
+      resolvedAt: inc.resolved_at,
+      severity: (inc.severity === 'baja' ? 'low' :
+        inc.severity === 'media' ? 'medium' :
+          inc.severity === 'alta' ? 'high' :
+            inc.severity === 'critica' ? 'critical' :
+              (inc.severity || 'medium')) as any,
+      type: (inc.type === 'mecanica' ? 'mechanical' :
+        inc.type === 'operacional' ? 'operational' :
+          inc.type === 'climatica' ? 'environmental' :
+            inc.type === 'otra' ? 'other' :
+              (inc.type || 'other')) as any,
+      status: (inc.status === 'abierta' ? 'open' :
+        inc.status === 'en_curso' ? 'in_progress' :
+          inc.status === 'resuelta' ? 'resolved' :
+            (inc.status || 'open')) as any,
+      photos: inc.photos || []
     }))
 
     setIncidents(mappedIncidents)
@@ -276,15 +181,11 @@ export default function NotificacionesPage() {
   }
 
   const markAsRead = (id: number) => {
-    setNotifications(notifications.map(notification =>
-      notification.id === id ? { ...notification, isRead: true } : notification
-    ))
-    toast.success('Notificación marcada como leída')
+    markNotificationAsRead(id.toString())
   }
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map(notification => ({ ...notification, isRead: true })))
-    toast.success('Todas las notificaciones marcadas como leídas')
+    contextMarkAllAsRead()
   }
 
   const deleteNotification = (id: number) => {
@@ -902,6 +803,27 @@ export default function NotificacionesPage() {
                       Resuelta el: {formatDate(selectedIncident.resolvedAt)} {formatTime(selectedIncident.resolvedAt)}
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Photographic Evidence Section */}
+              {((selectedIncident.photos && selectedIncident.photos.length > 0) || (selectedIncident.images && selectedIncident.images.length > 0)) && (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <ImageIcon className="h-5 w-5 text-gray-500" />
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Evidencia Fotográfica</p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[...(selectedIncident.photos || []), ...(selectedIncident.images || [])].map((photo, index) => (
+                      <div key={index} className="relative aspect-square rounded-xl overflow-hidden group cursor-pointer border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                        <img
+                          src={photo}
+                          alt={`Evidencia ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

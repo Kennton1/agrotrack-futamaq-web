@@ -149,6 +149,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error }
     }
 
+    // 2. Sincronizar con la tabla pública 'users'
+    try {
+      await supabase
+        .from('users')
+        .update({
+          full_name: data.full_name,
+          role: data.role,
+          avatar_url: data.avatar_url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+    } catch (syncError) {
+      console.error('Error syncing profile to public table:', syncError)
+      // No bloqueamos el retorno porque el update en Auth ya fue exitoso
+    }
+
     // Actualizamos el estado local inmediatamente para una UI reactiva
     // aunque onAuthStateChange también debería dispararse
     setUser(prev => prev ? {

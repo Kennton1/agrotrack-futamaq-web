@@ -251,12 +251,24 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center space-x-3 text-white">
-                  <div className="h-12 w-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg backdrop-blur-sm">
-                    <span className="text-white text-sm font-bold">A</span>
+                <Link href="/perfil" className="flex items-center space-x-3 text-white hover:opacity-90 transition-opacity">
+                  <div className="h-12 w-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
+                    {user?.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt={user.full_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white text-sm font-bold">
+                        {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                      </span>
+                    )}
                   </div>
-                  <span className="hidden md:block text-lg font-semibold">Administrador</span>
-                </div>
+                  <span className="hidden md:block text-lg font-semibold truncate max-w-[150px]">
+                    {user?.full_name || 'Usuario'}
+                  </span>
+                </Link>
               </div>
             </div>
           </div>
@@ -316,10 +328,18 @@ function SidebarContent({ pathname, user, signOut }: { pathname: string, user: a
       <div className="p-4 border-t border-gray-200/50 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0">
-            <div className="h-10 w-10 bg-gradient-primary rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-white text-sm font-bold">
-                {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}
-              </span>
+            <div className="h-10 w-10 bg-gradient-primary rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.full_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white text-sm font-bold">
+                  {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex-1 min-w-0">

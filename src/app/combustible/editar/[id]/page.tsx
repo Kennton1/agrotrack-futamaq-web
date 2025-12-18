@@ -36,8 +36,18 @@ export default function EditarCargaCombustiblePage({ params }: { params: { id: s
   const { fuelLoads, machinery, workOrders, updateFuelLoad } = useApp()
   const fuelLoadId = parseInt(params.id)
   const currentFuelLoad = fuelLoads.find(f => f.id === fuelLoadId)
-  const [fuelLoadImage, setFuelLoadImage] = useState<string | undefined>(currentFuelLoad?.fuel_load_image)
-  const [receiptImage, setReceiptImage] = useState<string | undefined>(currentFuelLoad?.receipt_image)
+  const [fuelLoadImage, setTypeFuelLoadImage] = useState<string | undefined>(() => {
+    const photo = currentFuelLoad?.photos?.find((p: any) => p.name === 'Foto de Carga')
+    return photo?.url || currentFuelLoad?.fuel_load_image
+  })
+  const [receiptImage, setTypeReceiptImage] = useState<string | undefined>(() => {
+    const photo = currentFuelLoad?.photos?.find((p: any) => p.name === 'Boleta')
+    return photo?.url || currentFuelLoad?.receipt_image
+  })
+
+  // Aliases for compatibility with existing code
+  const setFuelLoadImage = setTypeFuelLoadImage
+  const setReceiptImage = setTypeReceiptImage
 
   const {
     control,
@@ -76,8 +86,10 @@ export default function EditarCargaCombustiblePage({ params }: { params: { id: s
         source: currentFuelLoad.source,
         location: currentFuelLoad.location || '',
       })
-      setFuelLoadImage(currentFuelLoad.fuel_load_image)
-      setReceiptImage(currentFuelLoad.receipt_image)
+      const photoLoad = currentFuelLoad.photos?.find((p: any) => p.name === 'Foto de Carga')
+      const photoReceipt = currentFuelLoad.photos?.find((p: any) => p.name === 'Boleta')
+      setFuelLoadImage(photoLoad?.url || currentFuelLoad.fuel_load_image)
+      setReceiptImage(photoReceipt?.url || currentFuelLoad.receipt_image)
     } else {
       toast.error('Carga de combustible no encontrada.')
       router.push('/combustible')
@@ -93,8 +105,7 @@ export default function EditarCargaCombustiblePage({ params }: { params: { id: s
       return
     }
 
-    const updatedFuelLoad = {
-      ...currentFuelLoad,
+    const updatedPayload = {
       machinery_id: data.machinery_id,
       machinery_code: `${selectedMachinery.brand} ${selectedMachinery.model}`,
       operator_id: data.operator_id,
@@ -106,11 +117,43 @@ export default function EditarCargaCombustiblePage({ params }: { params: { id: s
       work_order_id: data.work_order_id || null,
       source: data.source,
       location: data.location,
-      fuel_load_image: fuelLoadImage,
-      receipt_image: receiptImage,
     }
 
-    updateFuelLoad(fuelLoadId, updatedFuelLoad)
+    // Transform images to photos array
+    const photos: any[] = []
+
+    // Preserve existing photos unless replaced
+    const existingLoadPhoto = currentFuelLoad.photos?.find((p: any) => p.name === 'Foto de Carga')
+    const existingReceiptPhoto = currentFuelLoad.photos?.find((p: any) => p.name === 'Boleta')
+
+    if (fuelLoadImage) {
+      if (existingLoadPhoto && existingLoadPhoto.url === fuelLoadImage) {
+        photos.push(existingLoadPhoto)
+      } else {
+        photos.push({
+          id: existingLoadPhoto?.id || `fuel_load_${Date.now()}`,
+          url: fuelLoadImage,
+          type: 'image',
+          name: 'Foto de Carga'
+        })
+      }
+    }
+
+    if (receiptImage) {
+      if (existingReceiptPhoto && existingReceiptPhoto.url === receiptImage) {
+        photos.push(existingReceiptPhoto)
+      } else {
+        const isPdf = receiptImage.startsWith('data:application/pdf') || receiptImage.toLowerCase().endsWith('.pdf')
+        photos.push({
+          id: existingReceiptPhoto?.id || `receipt_${Date.now()}`,
+          url: receiptImage,
+          type: isPdf ? 'document' : 'image',
+          name: 'Boleta'
+        })
+      }
+    }
+
+    updateFuelLoad(fuelLoadId, { ...updatedPayload, photos })
     toast.success('Carga de combustible actualizada exitosamente!')
     router.push('/combustible')
   }
@@ -137,8 +180,8 @@ export default function EditarCargaCombustiblePage({ params }: { params: { id: s
                 <p className="text-blue-100">Actualiza la información de la carga de combustible</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => router.push('/combustible')}
               className="bg-white/10 hover:bg-white/20 border-white/30 text-white backdrop-blur-sm"
             >
@@ -405,15 +448,15 @@ export default function EditarCargaCombustiblePage({ params }: { params: { id: s
 
               {/* Botones de Acción Mejorados */}
               <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => router.push('/combustible')}
                   className="px-6 h-11 border-gray-300 hover:bg-gray-50"
                 >
                   Cancelar
                 </Button>
-                <Button 
+                <Button
                   type="submit"
                   className="px-8 h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
                 >

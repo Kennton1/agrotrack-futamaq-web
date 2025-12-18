@@ -81,11 +81,31 @@ export default function NuevaCargaCombustiblePage() {
       work_order_id: data.work_order_id || null,
       source: data.source,
       location: data.location,
-      fuel_load_image: fuelLoadImage,
-      receipt_image: receiptImage,
     }
 
-    await addFuelLoad(newFuelLoad)
+    // Transform images to photos array
+    const photos: any[] = []
+
+    if (fuelLoadImage) {
+      photos.push({
+        id: `fuel_load_${Date.now()}`,
+        url: fuelLoadImage,
+        type: 'image',
+        name: 'Foto de Carga'
+      })
+    }
+
+    if (receiptImage) {
+      const isPdf = receiptImage.startsWith('data:application/pdf') || receiptImage.toLowerCase().endsWith('.pdf')
+      photos.push({
+        id: `receipt_${Date.now()}`,
+        url: receiptImage,
+        type: isPdf ? 'document' : 'image',
+        name: 'Boleta'
+      })
+    }
+
+    await addFuelLoad({ ...newFuelLoad, photos })
     router.push('/combustible')
   }
 

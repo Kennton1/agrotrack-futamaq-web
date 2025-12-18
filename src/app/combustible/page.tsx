@@ -118,6 +118,7 @@ export default function CombustiblePage() {
     console.log('Fuel Load seleccionado:', fuelLoad)
     console.log('Tiene fuel_load_image?', !!fuelLoad.fuel_load_image)
     console.log('Tiene receipt_image?', !!fuelLoad.receipt_image)
+    console.log('Fotos en array:', fuelLoad.photos?.length || 0)
     setSelectedFuelLoad(fuelLoad)
   }
 
@@ -382,6 +383,84 @@ export default function CombustiblePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Imágenes de carga y boleta */}
+          {selectedFuelLoad && (selectedFuelLoad.fuel_load_image || selectedFuelLoad.receipt_image || (selectedFuelLoad.photos && selectedFuelLoad.photos.length > 0)) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              {selectedFuelLoad.fuel_load_image && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Foto de Carga (Legacy)</h4>
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group">
+                    <img
+                      src={selectedFuelLoad.fuel_load_image}
+                      alt="Foto de carga"
+                      className="object-cover w-full h-full"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <a
+                        href={selectedFuelLoad.fuel_load_image}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white bg-blue-600 px-3 py-1 rounded-full text-xs hover:bg-blue-700"
+                      >
+                        Ver Original
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {selectedFuelLoad.receipt_image && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Foto de Boleta (Legacy)</h4>
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group">
+                    <img
+                      src={selectedFuelLoad.receipt_image}
+                      alt="Foto de boleta"
+                      className="object-cover w-full h-full"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <a
+                        href={selectedFuelLoad.receipt_image}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white bg-blue-600 px-3 py-1 rounded-full text-xs hover:bg-blue-700"
+                      >
+                        Ver Original
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nuevas Fotos (Array) */}
+              {selectedFuelLoad.photos && selectedFuelLoad.photos.map((photo: any, idx: number) => {
+                const url = typeof photo === 'string' ? photo : photo.url;
+                const label = typeof photo === 'string' ? `Foto ${idx + 1}` : (photo.name || 'Evidencia');
+                return (
+                  <div key={idx}>
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">{label}</h4>
+                    <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group">
+                      <img
+                        src={url}
+                        alt={label}
+                        className="object-cover w-full h-full"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-white bg-blue-600 px-3 py-1 rounded-full text-xs hover:bg-blue-700"
+                        >
+                          Ver Original
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Estadísticas rápidas - DESPUÉS de filtros */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -970,7 +1049,7 @@ export default function CombustiblePage() {
                   <Camera className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   <span>Registro Fotográfico y Documentos</span>
                 </h4>
-                {(selectedFuelLoad.fuel_load_image || selectedFuelLoad.receipt_image) && (
+                {(selectedFuelLoad.fuel_load_image || selectedFuelLoad.receipt_image || (selectedFuelLoad.photos && selectedFuelLoad.photos.length > 0)) && (
                   <Badge variant="success" className="text-xs">
                     Archivos adjuntos
                   </Badge>
@@ -978,165 +1057,219 @@ export default function CombustiblePage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Foto de la Carga */}
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Foto de la Carga</span>
-                    </div>
-                    {selectedFuelLoad.fuel_load_image ? (
-                      <Badge variant="info" className="text-xs">
-                        <ImageIcon className="h-3 w-3 mr-1" />
-                        IMAGEN
-                      </Badge>
-                    ) : (
-                      <Badge variant="default" className="text-xs text-gray-500">
-                        Sin archivo
-                      </Badge>
-                    )}
-                  </div>
-                  {selectedFuelLoad.fuel_load_image ? (
-                    <div className="rounded-lg overflow-hidden border-2 border-blue-300 bg-white relative shadow-md">
-                      <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg z-10">
-                        <ImageIcon className="h-3 w-3" />
-                        <span>IMAGEN CARGADA</span>
-                      </div>
-                      <img
-                        src={selectedFuelLoad.fuel_load_image}
-                        alt="Foto de la carga de combustible"
-                        className="w-full h-auto max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => {
-                          const modal = document.createElement('div')
-                          modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4'
-                          modal.onclick = () => document.body.removeChild(modal)
-                          const img = document.createElement('img')
-                          img.src = selectedFuelLoad.fuel_load_image!
-                          img.className = 'max-w-full max-h-[90vh] object-contain'
-                          img.onclick = (e) => e.stopPropagation()
-                          modal.appendChild(img)
-                          document.body.appendChild(modal)
-                        }}
-                      />
-                      <div className="absolute bottom-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg">
-                        <ImageIcon className="h-3 w-3" />
-                        <span>JPG/PNG</span>
-                      </div>
-                      <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded shadow-lg">
-                        ✓ Archivo disponible
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-8 text-center">
-                      <ImageIcon className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No hay foto de la carga</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Foto/PDF de la Boleta */}
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <Receipt className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Boleta/Comprobante</span>
-                    </div>
-                    {selectedFuelLoad.receipt_image ? (
-                      <Badge
-                        variant={selectedFuelLoad.receipt_image.startsWith('data:application/pdf') ? 'warning' : 'info'}
-                        className="text-xs"
-                      >
-                        {selectedFuelLoad.receipt_image.startsWith('data:application/pdf') ? (
-                          <>
-                            <FileText className="h-3 w-3 mr-1" />
-                            PDF
-                          </>
-                        ) : (
-                          <>
+                {(() => {
+                  const loadPhoto = selectedFuelLoad.photos?.find((p: any) => p.name === 'Foto de Carga')
+                  const imageUrl = loadPhoto?.url || selectedFuelLoad.fuel_load_image
+                  return (
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Foto de la Carga</span>
+                        </div>
+                        {imageUrl ? (
+                          <Badge variant="info" className="text-xs">
                             <ImageIcon className="h-3 w-3 mr-1" />
                             IMAGEN
-                          </>
+                          </Badge>
+                        ) : (
+                          <Badge variant="default" className="text-xs text-gray-500">
+                            Sin archivo
+                          </Badge>
                         )}
-                      </Badge>
-                    ) : (
-                      <Badge variant="default" className="text-xs text-gray-500">
-                        Sin archivo
-                      </Badge>
-                    )}
-                  </div>
-                  {selectedFuelLoad.receipt_image ? (
-                    <div className="rounded-lg overflow-hidden border-2 border-green-300 bg-white relative shadow-md">
-                      {selectedFuelLoad.receipt_image.startsWith('data:application/pdf') ? (
-                        <div
-                          className="w-full min-h-[200px] flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-50 transition-colors relative"
-                          onClick={() => {
-                            const modal = document.createElement('div')
-                            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4'
-                            modal.onclick = () => document.body.removeChild(modal)
-                            const iframe = document.createElement('iframe')
-                            iframe.src = selectedFuelLoad.receipt_image!
-                            iframe.className = 'w-full max-w-4xl h-[90vh] border-0 rounded-lg bg-white'
-                            iframe.onclick = (e) => e.stopPropagation()
-                            modal.appendChild(iframe)
-                            document.body.appendChild(modal)
-                          }}
-                        >
-                          <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg z-10">
-                            <FileText className="h-3 w-3" />
-                            <span>PDF CARGADO</span>
-                          </div>
-                          <div className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg">
-                            <FileText className="h-3 w-3" />
-                            <span>PDF</span>
-                          </div>
-                          <div className="p-4 bg-red-100 rounded-full mb-4">
-                            <FileText className="h-12 w-12 text-red-600" />
-                          </div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">Archivo PDF disponible</p>
-                          <p className="text-xs text-gray-500 mb-2">Haz clic para ver el PDF completo</p>
-                          <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded shadow-lg">
-                            ✓ Archivo disponible
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg z-10">
+                      </div>
+                      {imageUrl ? (
+                        <div className="rounded-lg overflow-hidden border-2 border-blue-300 bg-white relative shadow-md">
+                          <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg z-10">
                             <ImageIcon className="h-3 w-3" />
                             <span>IMAGEN CARGADA</span>
                           </div>
-                          <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg">
-                            <ImageIcon className="h-3 w-3" />
-                            <span>JPG/PNG</span>
-                          </div>
                           <img
-                            src={selectedFuelLoad.receipt_image}
-                            alt="Foto de la boleta"
+                            src={imageUrl}
+                            alt="Foto de la carga de combustible"
                             className="w-full h-auto max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
                             onClick={() => {
                               const modal = document.createElement('div')
                               modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4'
                               modal.onclick = () => document.body.removeChild(modal)
                               const img = document.createElement('img')
-                              img.src = selectedFuelLoad.receipt_image!
+                              img.src = imageUrl
                               img.className = 'max-w-full max-h-[90vh] object-contain'
                               img.onclick = (e) => e.stopPropagation()
                               modal.appendChild(img)
                               document.body.appendChild(modal)
                             }}
                           />
+                          <div className="absolute bottom-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg">
+                            <ImageIcon className="h-3 w-3" />
+                            <span>JPG/PNG</span>
+                          </div>
                           <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded shadow-lg">
                             ✓ Archivo disponible
                           </div>
-                        </>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-8 text-center">
+                          <ImageIcon className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 dark:text-gray-400">No hay foto de la carga</p>
+                        </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-8 text-center">
-                      <Receipt className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No hay boleta/comprobante</p>
+                  )
+                })()}
+
+                {/* Foto/PDF de la Boleta */}
+                {(() => {
+                  const receiptPhoto = selectedFuelLoad.photos?.find((p: any) => p.name === 'Boleta')
+                  const receiptUrl = receiptPhoto?.url || selectedFuelLoad.receipt_image
+                  const isPdf = receiptUrl?.startsWith('data:application/pdf') || receiptUrl?.toLowerCase().endsWith('.pdf')
+                  return (
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <Receipt className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Boleta/Comprobante</span>
+                        </div>
+                        {receiptUrl ? (
+                          <Badge
+                            variant={isPdf ? 'warning' : 'info'}
+                            className="text-xs"
+                          >
+                            {isPdf ? (
+                              <>
+                                <FileText className="h-3 w-3 mr-1" />
+                                PDF
+                              </>
+                            ) : (
+                              <>
+                                <ImageIcon className="h-3 w-3 mr-1" />
+                                IMAGEN
+                              </>
+                            )}
+                          </Badge>
+                        ) : (
+                          <Badge variant="default" className="text-xs text-gray-500">
+                            Sin archivo
+                          </Badge>
+                        )}
+                      </div>
+                      {receiptUrl ? (
+                        <div className="rounded-lg overflow-hidden border-2 border-green-300 bg-white relative shadow-md">
+                          {isPdf ? (
+                            <div
+                              className="w-full min-h-[200px] flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-50 transition-colors relative"
+                              onClick={() => {
+                                const modal = document.createElement('div')
+                                modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4'
+                                modal.onclick = () => document.body.removeChild(modal)
+                                const iframe = document.createElement('iframe')
+                                iframe.src = receiptUrl
+                                iframe.className = 'w-full max-w-4xl h-[90vh] border-0 rounded-lg bg-white'
+                                iframe.onclick = (e) => e.stopPropagation()
+                                modal.appendChild(iframe)
+                                document.body.appendChild(modal)
+                              }}
+                            >
+                              <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg z-10">
+                                <FileText className="h-3 w-3" />
+                                <span>PDF CARGADO</span>
+                              </div>
+                              <div className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg">
+                                <FileText className="h-3 w-3" />
+                                <span>PDF</span>
+                              </div>
+                              <div className="p-4 bg-red-100 rounded-full mb-4">
+                                <FileText className="h-12 w-12 text-red-600" />
+                              </div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">Archivo PDF disponible</p>
+                              <p className="text-xs text-gray-500 mb-2">Haz clic para ver el PDF completo</p>
+                              <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded shadow-lg">
+                                ✓ Archivo disponible
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg z-10">
+                                <ImageIcon className="h-3 w-3" />
+                                <span>IMAGEN CARGADA</span>
+                              </div>
+                              <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded flex items-center space-x-1 shadow-lg">
+                                <ImageIcon className="h-3 w-3" />
+                                <span>JPG/PNG</span>
+                              </div>
+                              <img
+                                src={receiptUrl}
+                                alt="Foto de la boleta"
+                                className="w-full h-auto max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => {
+                                  const modal = document.createElement('div')
+                                  modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4'
+                                  modal.onclick = () => document.body.removeChild(modal)
+                                  const img = document.createElement('img')
+                                  img.src = receiptUrl
+                                  img.className = 'max-w-full max-h-[90vh] object-contain'
+                                  img.onclick = (e) => e.stopPropagation()
+                                  modal.appendChild(img)
+                                  document.body.appendChild(modal)
+                                }}
+                              />
+                              <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded shadow-lg">
+                                ✓ Archivo disponible
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-8 text-center">
+                          <Receipt className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 dark:text-gray-400">No hay boleta/comprobante</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  )
+                })()}
               </div>
+
+              {/* Otras fotos que no son 'Foto de Carga' ni 'Boleta' */}
+              {selectedFuelLoad.photos && selectedFuelLoad.photos.filter((p: any) => p.name !== 'Foto de Carga' && p.name !== 'Boleta').length > 0 && (
+                <div className="mt-4">
+                  <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Otros Archivos y Evidencias</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {selectedFuelLoad.photos
+                      .filter((p: any) => p.name !== 'Foto de Carga' && p.name !== 'Boleta')
+                      .map((photo: any, index: number) => (
+                        <div key={photo.id || index} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                          {photo.type === 'image' ? (
+                            <img
+                              src={photo.url}
+                              alt={photo.name}
+                              className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform duration-300"
+                              onClick={() => {
+                                const modal = document.createElement('div')
+                                modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4'
+                                modal.onclick = () => document.body.removeChild(modal)
+                                const img = document.createElement('img')
+                                img.src = photo.url
+                                img.className = 'max-w-full max-h-[90vh] object-contain'
+                                img.onclick = (e) => e.stopPropagation()
+                                modal.appendChild(img)
+                                document.body.appendChild(modal)
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="w-full h-full flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                              onClick={() => window.open(photo.url, '_blank')}
+                            >
+                              <FileText className="h-8 w-8 text-red-500 mb-1" />
+                              <span className="text-[10px] text-center font-medium truncate w-full">{photo.name}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -1258,7 +1391,6 @@ function NewFuelLoadModal({
       cost_per_liter: data.cost_per_liter,
       work_order_id: data.work_order_id || null,
       source: data.source,
-      location: data.location,
       location: data.location,
     }
 

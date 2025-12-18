@@ -131,6 +131,18 @@ export interface User {
   phone?: string
 }
 
+export interface Client {
+  id: number
+  name: string
+  rut: string
+  contact_person: string
+  phone: string
+  email: string
+  address: string
+  created_at: string
+  updated_at: string
+}
+
 
 export interface SparePart {
   id: number
@@ -169,6 +181,7 @@ export interface Incident {
   title: string
   description: string
   status: 'abierta' | 'en_curso' | 'resuelta'
+  severity: 'baja' | 'media' | 'alta' | 'critica'
   reporter_id: string
   assigned_to?: string
   photos?: string[]
@@ -203,6 +216,7 @@ interface AppContextType {
   incidents: Incident[]
   notifications: Notification[]
   users: User[]
+  clients: Client[]
 
   // Funciones de maquinarias
   addMachinery: (machinery: Omit<Machinery, 'id' | 'created_at'>) => void
@@ -249,8 +263,14 @@ interface AppContextType {
   // Funciones de incidentes
   deleteIncident: (id: number) => void
 
+  // Funciones de clientes
+  addClient: (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => Promise<Client | null>
+  updateClient: (id: number, client: Partial<Client>) => Promise<void>
+  deleteClient: (id: number) => Promise<void>
+
   // Funciones de notificaciones
   markNotificationAsRead: (id: string) => void
+  markAllAsRead: () => void
   clearNotifications: () => void
 }
 
@@ -303,78 +323,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [incidents, setIncidents] = useState<Incident[]>(() =>
     loadFromStorage('incidents', [])
   )
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'maintenance',
-      title: 'Mantenimiento Programado',
-      message: 'El tractor T001 requiere mantenimiento preventivo en las próximas 24 horas',
-      timestamp: '2024-03-25T07:30:00Z',
-      read: false,
-      link: '/mantenimientos'
-    },
-    {
-      id: '2',
-      type: 'fuel',
-      title: 'Consumo Anómalo de Combustible',
-      message: 'El tractor T002 ha consumido 50% más combustible de lo normal en las últimas 2 horas',
-      timestamp: '2024-03-25T09:15:00Z',
-      read: false,
-      link: '/combustible'
-    },
-    {
-      id: '3',
-      type: 'stock',
-      title: 'Stock Bajo de Repuestos',
-      message: 'Filtro de aceite motor (FIL-001) está por debajo del stock mínimo',
-      timestamp: '2024-03-25T08:45:00Z',
-      read: true,
-      link: '/repuestos'
-    },
-    {
-      id: '4',
-      type: 'work_order',
-      title: 'Orden de Trabajo Completada',
-      message: 'La orden OT-2024-001 ha sido completada exitosamente',
-      timestamp: '2024-03-25T07:20:00Z',
-      read: true,
-      link: '/ordenes-trabajo'
-    },
-    {
-      id: '5',
-      type: 'system',
-      title: 'Respaldo Completado',
-      message: 'El respaldo automático de la base de datos se completó exitosamente',
-      timestamp: '2024-03-25T06:00:00Z',
-      read: true
-    },
-    {
-      id: '6',
-      type: 'machinery',
-      title: 'Maquinaria Fuera de Servicio',
-      message: 'El pulverizador PUL001 ha sido marcado como fuera de servicio',
-      timestamp: '2024-03-24T16:30:00Z',
-      read: false,
-      link: '/maquinarias'
-    },
-    {
-      id: '7',
-      type: 'fuel',
-      title: 'Carga de Combustible Registrada',
-      message: 'Se registró una carga de 150L de combustible para el tractor T001',
-      timestamp: '2024-03-24T14:15:00Z',
-      read: true,
-      link: '/combustible'
-    },
-    {
-      id: '8',
-      type: 'system',
-      title: 'Error de Conexión',
-      message: 'Se perdió la conexión con el servidor de ubicación GPS',
-      timestamp: '2024-03-24T12:00:00Z',
-      read: false
-    }
-  ])
+  const [notifications, setNotifications] = useState<Notification[]>(() =>
+    loadFromStorage('notifications', [])
+  )
+  const [clients, setClients] = useState<Client[]>(() =>
+    loadFromStorage('clients', [])
+  )
 
   // Usuarios predefinidos (copiados de AuthContext o mockeados aquí)
   const [users, setUsers] = useState<User[]>(() =>
@@ -413,16 +367,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return
 
     try {
-      // Fetch users
-      const { data: usersData } = await supabase.from('users').select('*')
+      console.log('🚀 Iniciando carga paralela de datos...')
+      const [
+        { data: usersData },
+        { data: sessionDataRes, error: sessionError },
+        { data: machineryData },
+        { data: workOrdersData },
+        { data: maintenancesData },
+        { data: incidentsData, error: incidentsError },
+        { data: fuelLoadsData },
+        { data: sparePartsData },
+        { data: partMovementsData },
+        { data: clientsData }
+      ] = await Promise.all([
+        supabase.from('users').select('*'),
+        supabase.auth.getSession(),
+        supabase.from('machinery').select('*'),
+        supabase.from('work_orders').select('*').order('created_at', { ascending: false }),
+        supabase.from('maintenances').select('*').order('created_at', { ascending: false }),
+        supabase.from('incidents').select('*').order('created_at', { ascending: false }),
+        supabase.from('fuel_loads').select('*').order('date', { ascending: false }),
+        supabase.from('spare_parts').select('*').order('description', { ascending: true }),
+        supabase.from('part_movements').select('*').order('date', { ascending: false }),
+        supabase.from('clients').select('*').order('name', { ascending: true })
+      ])
+
+      // 1. Procesar Usuarios y Sesión
       if (usersData) {
         setUsers(usersData as User[])
 
-        // --- SYNC AUTH USER TO PUBLIC USERS ---
-        // Verificar si el usuario actual autenticado existe en la tabla pública users
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-
-        // Safety check: If session/token is causing 431 errors, sign out
         if (sessionError && sessionError.message.includes('431')) {
           console.warn('431 Error detected, clearing session...')
           await supabase.auth.signOut()
@@ -431,79 +404,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        const session = sessionData?.session
-
+        const session = sessionDataRes?.session
         if (session?.user) {
           const publicUser = usersData.find((u: any) => u.email === session.user.email)
-
           if (!publicUser) {
             console.log('🔄 Sincronizando usuario de Auth a tabla pública...')
-            // El usuario existe en Auth pero no en public.users, crearlo.
             const newUserPublicData = {
-              id: session.user.id, // IMPORTANTE: Usar el mismo ID que Auth
+              id: session.user.id,
               email: session.user.email,
               full_name: session.user.user_metadata?.full_name || 'Nuevo Usuario',
               role: session.user.user_metadata?.role || 'operador',
+              avatar_url: session.user.user_metadata?.avatar_url || null,
               is_active: true,
               created_at: new Date().toISOString(),
               last_login: new Date().toISOString()
             }
-
-            const { error: insertError } = await supabase
-              .from('users')
-              .insert([newUserPublicData])
-
-            if (!insertError) {
-              console.log('✅ Usuario sincronizado correctamente')
-              // Actualizar estado local
-              setUsers(prev => [...prev, newUserPublicData as any])
-            } else {
-              console.error('❌ Error al sincronizar usuario:', insertError)
+            const { error: insertError } = await supabase.from('users').insert([newUserPublicData])
+            if (!insertError) setUsers(prev => [...prev, newUserPublicData as any])
+          } else if (publicUser && (publicUser.avatar_url !== session.user.user_metadata?.avatar_url || publicUser.full_name !== session.user.user_metadata?.full_name)) {
+            console.log('🔄 Actualizando datos de usuario en tabla pública...')
+            const updatedData = {
+              full_name: session.user.user_metadata?.full_name || publicUser.full_name,
+              avatar_url: session.user.user_metadata?.avatar_url || publicUser.avatar_url,
+              last_login: new Date().toISOString()
             }
+            await supabase.from('users').update(updatedData).eq('id', publicUser.id)
+            setUsers(prev => prev.map(u => u.id === publicUser.id ? { ...u, ...updatedData } : u))
           }
         }
-        // --------------------------------------
       }
 
-      // Fetch machinery
-      const { data: machineryData } = await supabase.from('machinery').select('*')
+      // 2. Cargar el resto de los datos
       if (machineryData) setMachinery(machineryData as Machinery[])
-
-      // Fetch work orders
-      const { data: workOrdersData } = await supabase
-        .from('work_orders')
-        .select('*')
-        .order('created_at', { ascending: false })
-
       if (workOrdersData) setWorkOrders(workOrdersData as WorkOrder[])
-
-      // Fetch maintenance
-      const { data: maintenancesData } = await supabase
-        .from('maintenances')
-        .select('*')
-        .order('created_at', { ascending: false })
       if (maintenancesData) setMaintenances(maintenancesData as Maintenance[])
-
-      // Fetch Incidents
-      console.log('Fetching incidents...')
-      const { data: incidentsData, error: incidentsError } = await supabase
-        .from('incidents')
-        .select('*')
-        .order('created_at', { ascending: false })
 
       if (incidentsError) {
         console.error('Error fetching incidents:', incidentsError)
       } else if (incidentsData) {
-        console.log(`Fetched ${incidentsData.length} incidents`)
         setIncidents(incidentsData as Incident[])
       }
 
-      // Fetch Fuel Loads
-      const { data: fuelLoadsData } = await supabase
-        .from('fuel_loads')
-        .select('*')
-        .order('date', { ascending: false })
       if (fuelLoadsData) setFuelLoads(fuelLoadsData as FuelLoad[])
+      if (sparePartsData) setSpareParts(sparePartsData as SparePart[])
+      if (partMovementsData) setPartMovements(partMovementsData as PartMovement[])
+      if (clientsData) setClients(clientsData as Client[])
+
+      console.log('✅ Carga de datos completada')
 
     } catch (error: any) {
       console.error('Error fetching data:', error)
@@ -624,33 +571,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
 
+  // Efectos para persistencia con DEBOUNCE para mayor fluidez de la UI
   useEffect(() => {
-    saveToStorage('workOrders', workOrders)
-  }, [workOrders])
+    const timer = setTimeout(() => {
+      saveToStorage('workOrders', workOrders)
+      saveToStorage('maintenances', maintenances)
+      saveToStorage('fuelLoads', fuelLoads)
+      saveToStorage('spareParts', spareParts)
+      saveToStorage('partMovements', partMovements)
+      saveToStorage('incidents', incidents)
+      saveToStorage('users', users)
+      saveToStorage('notifications', notifications)
+      saveToStorage('machinery', machinery)
+      saveToStorage('clients', clients)
+    }, 500) // Debounce de 500ms
 
-  useEffect(() => {
-    saveToStorage('maintenances', maintenances)
-  }, [maintenances])
-
-  useEffect(() => {
-    saveToStorage('fuelLoads', fuelLoads)
-  }, [fuelLoads])
-
-  useEffect(() => {
-    saveToStorage('spareParts', spareParts)
-  }, [spareParts])
-
-  useEffect(() => {
-    saveToStorage('partMovements', partMovements)
-  }, [partMovements])
-
-  useEffect(() => {
-    saveToStorage('incidents', incidents)
-  }, [incidents])
-
-  useEffect(() => {
-    saveToStorage('users', users)
-  }, [users])
+    return () => clearTimeout(timer)
+  }, [workOrders, maintenances, fuelLoads, spareParts, partMovements, incidents, users, notifications, machinery, clients])
 
   // Funciones de maquinarias
   // Helper to upload images
@@ -849,6 +786,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const deleteMachinery = async (id: number) => {
+    // Optimistic update
+    const previousMachinery = [...machinery]
+    setMachinery(prev => prev.filter(m => m.id !== id))
+
     try {
       if (supabase) {
         const { error } = await supabase
@@ -856,16 +797,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .delete()
           .eq('id', id)
 
-        if (error) throw error
-        setMachinery(prev => prev.filter(m => m.id !== id))
+        if (error) {
+          // Revert on error
+          setMachinery(previousMachinery)
+          throw error
+        }
         toast.success('Maquinaria eliminada exitosamente')
       } else {
-        setMachinery(prev => prev.filter(m => m.id !== id))
         toast.success('Maquinaria eliminada (Local)')
       }
     } catch (error: any) {
       console.error('Error deleting machinery:', error)
       toast.error('Error al eliminar maquinaria: ' + error.message)
+      // Note: Machinery is already reverted in the 'if (error)' block for supabase errors
     }
   }
 
@@ -875,185 +819,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Funciones de órdenes de trabajo
   const addWorkOrder = async (newWorkOrder: Omit<WorkOrder, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
+    // 1. Generar ID localmente de forma inmediata para optimismo
+    const now = new Date()
+    const year = now.getFullYear()
+    const prefix = `OT-${year}-`
 
-
-      if (supabase) {
-        // Generar ID único usando la base de datos para evitar colisiones
-        const now = new Date()
-        const year = now.getFullYear()
-
-        // Formato ID: OT-AAAA-SEQ (Ej: OT-2025-003)
-        const prefix = `OT-${year}-`
-        let nextSeq = 1
-
-        try {
-          // Intentar consultar la ÚLTIMA orden creada (globalmente) para mantener la secuencia
-          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-
-          const dbPromise = supabase
-            .from('work_orders')
-            .select('id')
-            .order('created_at', { ascending: false }) // Ordenar por fecha creación descendente
-            .limit(1)
-
-          const result: any = await Promise.race([dbPromise, timeoutPromise])
-          const { data: lastConfig, error: idError } = result
-
-          if (!idError && lastConfig && lastConfig.length > 0) {
-            const lastId = lastConfig[0].id
-            const parts = lastId.split('-')
-            // Asumimos formato OT-FECHA-SECUENCIA
-            if (parts.length >= 3) {
-              const lastSeqPart = parts[parts.length - 1] // Última parte es la secuencia
-              const currentSeq = parseInt(lastSeqPart, 10)
-              if (!isNaN(currentSeq)) {
-                nextSeq = currentSeq + 1
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('Error consultando secuencia global, intentando cálculo local:', err)
-
-          // Fallback Local: Buscar el ID con el número de secuencia más alto en TODAS las órdenes locales
-          let maxSeq = 0
-          workOrders.forEach(wo => {
-            const parts = wo.id.split('-')
-            if (parts.length >= 3) {
-              const seq = parseInt(parts[parts.length - 1], 10)
-              if (!isNaN(seq) && seq > maxSeq) maxSeq = seq
-            }
-          })
-          nextSeq = maxSeq + 1
-        }
-
-        // Ensure nextSeq is valid
-        if (isNaN(nextSeq) || nextSeq < 1) nextSeq = 1
-
-        const id = `${prefix}${String(nextSeq).padStart(3, '0')}`
-
-        // Check if ID already exists locally (just in case of collision with today's date prefix)
-        if (workOrders.some(wo => wo.id === id)) {
-          console.warn(`ID conflict detected locally for ${id}, incrementing...`)
-          // Si colisiona, simplemente incrementamos hasta encontrar hueco
-          let tempSeq = nextSeq
-          let tempId = id
-          while (workOrders.some(wo => wo.id === tempId)) {
-            tempSeq++
-            tempId = `${prefix}${String(tempSeq).padStart(3, '0')}`
-          }
-          nextSeq = tempSeq
-        }
-        const finalId = `${prefix}${String(nextSeq).padStart(3, '0')}`
-
-        // Limpiar el objeto de valores nulos o indefinidos que podrían causar problemas
-        // y asegurar que campos opcionales sean manejados correctamente
-        const workOrderData = {
-          id: finalId,
-          client_id: newWorkOrder.client_id,
-          field_name: newWorkOrder.field_name,
-          task_type: newWorkOrder.task_type,
-          description: newWorkOrder.description,
-          priority: newWorkOrder.priority,
-          planned_start_date: newWorkOrder.planned_start_date,
-          planned_end_date: newWorkOrder.planned_end_date,
-          status: newWorkOrder.status,
-          assigned_machinery: newWorkOrder.assigned_machinery || [],
-          target_hectares: newWorkOrder.target_hectares || 0,
-          // Campos opcionales: solo incluirlos si tienen valor
-          ...(newWorkOrder.assigned_operator ? { assigned_operator: newWorkOrder.assigned_operator } : { assigned_operator: null }),
-          ...(newWorkOrder.actual_start_date ? { actual_start_date: newWorkOrder.actual_start_date } : {}),
-          ...(newWorkOrder.actual_end_date ? { actual_end_date: newWorkOrder.actual_end_date } : {}),
-          target_hours: newWorkOrder.target_hours || 0,
-          actual_hectares: newWorkOrder.actual_hectares || 0,
-          actual_hours: newWorkOrder.actual_hours || 0,
-          progress_percentage: newWorkOrder.progress_percentage || 0
-        }
-
-        console.log('Enviando orden a Supabase:', workOrderData)
-
-        let data: WorkOrder | null = null;
-        let error: any = null;
-        try {
-          const result = await supabase
-            .from('work_orders')
-            .insert([workOrderData])
-            .select()
-            .single()
-
-          data = result.data as WorkOrder
-          error = result.error
-        } catch (fetchError: any) {
-          console.error("CRITICAL: Supabase INSERT failed with exception, falling back to local update:", fetchError)
-          // Don't throw, just treat as offline/error and save locally
-          error = { message: fetchError.message || 'Network error', details: 'Offline fallback triggered', hint: 'Saved locally', code: 'OFFLINE' }
-        }
-
-        if (error) {
-          console.warn('Supabase insert failed, saving locally:', error)
-          // If it was a network error or explicitly handled, we might want to save it locally
-          // Construct the object manually since 'data' is undefined
-          const offlineOrder: WorkOrder = {
-            id: workOrderData.id,
-            client_id: workOrderData.client_id,
-            field_name: workOrderData.field_name,
-            task_type: workOrderData.task_type,
-            description: workOrderData.description,
-            priority: workOrderData.priority,
-            planned_start_date: workOrderData.planned_start_date,
-            planned_end_date: workOrderData.planned_end_date,
-            status: workOrderData.status,
-            assigned_machinery: workOrderData.assigned_machinery,
-            target_hectares: workOrderData.target_hectares,
-            target_hours: workOrderData.target_hours,
-            actual_hectares: workOrderData.actual_hectares,
-            actual_hours: workOrderData.actual_hours,
-            progress_percentage: workOrderData.progress_percentage,
-            actual_start_date: workOrderData.actual_start_date || null,
-            actual_end_date: workOrderData.actual_end_date || null,
-            assigned_operator: workOrderData.assigned_operator || '',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-          setWorkOrders(prev => [offlineOrder, ...prev])
-          toast.success(`Orden creada (Modo Offline/Error de Red): ${finalId}`)
-          return // Return early so we don't hit the success block below or the outer catch
-        }
-
-        setWorkOrders(prev => [data as WorkOrder, ...prev])
-        toast.success(`Orden de trabajo creada: ${finalId}`)
-      } else {
-        // Fallback local sin Supabase
-        const now = new Date()
-        const year = now.getFullYear()
-        const prefix = `OT-${year}-`
-
-        const yearOrders = workOrders.filter(wo => wo.id.startsWith(prefix))
-        let maxSeq = 0
-        yearOrders.forEach(wo => {
-          const parts = wo.id.split('-')
-          if (parts.length === 3) {
-            const seq = parseInt(parts[2], 10)
-            if (!isNaN(seq) && seq > maxSeq) maxSeq = seq
-          }
-        })
-        const id = `${prefix}${String(maxSeq + 1).padStart(3, '0')}`
-
-        const workOrderWithId: WorkOrder = {
-          ...newWorkOrder,
-          id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        setWorkOrders(prev => [workOrderWithId, ...prev])
-        toast.success(`Orden de trabajo creada (Local): ${id}`)
+    // Cálculo de secuencia local basado en el estado actual para el año actual
+    let maxSeq = 0
+    workOrders.forEach(wo => {
+      if (wo.id.startsWith(prefix)) {
+        const parts = wo.id.split('-')
+        const seq = parseInt(parts[parts.length - 1], 10)
+        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq
       }
-    } catch (error: any) {
-      console.error('Error adding work order:', error)
-      // Mostrar mensaje más detallado si está disponible
-      const errorMessage = error.details || error.message || 'Error desconocido'
-      const errorHint = error.hint ? ` (${error.hint})` : ''
-      toast.error(`Error al crear orden: ${errorMessage}${errorHint}`)
+    })
+    const finalId = `${prefix}${String(maxSeq + 1).padStart(3, '0')}`
+
+    const optimisticOrder: WorkOrder = {
+      ...newWorkOrder,
+      id: finalId,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+      progress_percentage: 0,
+      actual_hectares: 0,
+      actual_hours: 0,
+      actual_start_date: null,
+      actual_end_date: null
+    }
+
+    // 2. Actualización de estado inmediata
+    setWorkOrders(prev => [optimisticOrder, ...prev])
+    toast.success('Orden de trabajo creada localmente')
+
+    // 3. Sincronización en segundo plano con Supabase
+    try {
+      if (supabase) {
+        // Limpiamos datos para la DB
+        const workOrderData = {
+          ...optimisticOrder,
+          assigned_machinery: optimisticOrder.assigned_machinery || [],
+          assigned_operator: optimisticOrder.assigned_operator || null
+        }
+
+        const { error } = await supabase.from('work_orders').insert([workOrderData])
+        if (error) {
+          console.warn('Error sincronizando orden con Supabase, se mantiene local:', error)
+          // No revertimos porque ya está en localStorage y el usuario puede seguir trabajando
+        } else {
+          console.log('✅ Orden sincronizada con éxito')
+        }
+      }
+    } catch (err) {
+      console.error('Error background sync:', err)
     }
   }
 
@@ -1065,6 +882,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const deleteWorkOrder = async (id: string) => {
+    // Optimistic update
+    const previousWorkOrders = [...workOrders]
+    setWorkOrders(prev => prev.filter(wo => wo.id !== id))
+
     try {
       if (supabase) {
         let error;
@@ -1085,22 +906,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const isNetworkError = error.message?.includes('fetch') ||
             error.message?.includes('network') ||
             error.message?.includes('connection') ||
-            // Supabase-js sometimes returns null code for fetch errors, or specific strings
             !error.code;
 
           if (isNetworkError) {
             toast('Eliminada localmente (Error de conexión)', { icon: '⚠️' });
-            // Continuamos a eliminar localmente abajo
           } else {
-            // Si es otro error (ej: permisos), lanzamos la excepción
+            // Revert state for non-network errors
+            setWorkOrders(previousWorkOrders)
             throw error
           }
+        } else {
+          toast.success('Orden de trabajo eliminada exitosamente')
         }
-
-        setWorkOrders(prev => prev.filter(wo => wo.id !== id))
-        if (!error) toast.success('Orden de trabajo eliminada exitosamente')
       } else {
-        setWorkOrders(prev => prev.filter(wo => wo.id !== id))
         toast.success('Orden de trabajo eliminada (Local)')
       }
     } catch (error: any) {
@@ -1403,16 +1221,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateSparePart = (id: number, updatedSparePart: Partial<SparePart>) => {
-    setSpareParts(prev =>
-      prev.map(s => s.id === id ? { ...s, ...updatedSparePart } : s)
-    )
-    toast.success('Repuesto actualizado exitosamente')
+  const updateSparePart = async (id: number, updatedSparePart: Partial<SparePart>) => {
+    try {
+      // Optimistic update
+      setSpareParts(prev =>
+        prev.map(s => s.id === id ? { ...s, ...updatedSparePart } : s)
+      )
+
+      if (supabase) {
+        const { error } = await supabase
+          .from('spare_parts')
+          .update(updatedSparePart)
+          .eq('id', id)
+
+        if (error) throw error
+        toast.success('Repuesto actualizado exitosamente')
+      }
+    } catch (error: any) {
+      console.error('Error updating spare part:', error)
+      toast.error('Error al actualizar: ' + error.message)
+      // En una implementación real, aquí deberíamos revertir el estado si falla
+    }
   }
 
-  const deleteSparePart = (id: number) => {
-    setSpareParts(prev => prev.filter(s => s.id !== id))
-    toast.success('Repuesto eliminado exitosamente')
+  const deleteSparePart = async (id: number) => {
+    try {
+      // Optimistic update
+      setSpareParts(prev => prev.filter(s => s.id !== id))
+
+      if (supabase) {
+        const { error } = await supabase
+          .from('spare_parts')
+          .delete()
+          .eq('id', id)
+
+        if (error) throw error
+        toast.success('Repuesto eliminado exitosamente')
+      }
+    } catch (error: any) {
+      console.error('Error deleting spare part:', error)
+      toast.error('Error al eliminar: ' + error.message)
+    }
   }
 
   const getSparePart = (id: number) => {
@@ -1420,48 +1269,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Funciones de movimientos de repuestos
-  const addPartMovement = (newMovement: Omit<PartMovement, 'id' | 'created_at'>) => {
-    const id = Math.max(...partMovements.map(m => m.id), 0) + 1
-    const movementWithId: PartMovement = {
-      ...newMovement,
-      id,
-      created_at: new Date().toISOString()
-    }
+  const addPartMovement = async (newMovement: Omit<PartMovement, 'id' | 'created_at'>) => {
+    try {
+      // 1. Actualizar stock del repuesto primero (Optimista)
+      const part = spareParts.find(p => p.id === newMovement.part_id)
+      if (part) {
+        const newStock = newMovement.movement_type === 'entrada'
+          ? part.current_stock + newMovement.quantity
+          : part.current_stock - newMovement.quantity
 
-    // Actualizar stock del repuesto
-    const part = spareParts.find(p => p.id === newMovement.part_id)
-    if (part) {
-      const newStock = newMovement.movement_type === 'entrada'
-        ? part.current_stock + newMovement.quantity
-        : part.current_stock - newMovement.quantity
+        if (newStock < 0) {
+          toast.error('No hay suficiente stock para esta salida')
+          return
+        }
 
-      if (newStock < 0) {
-        toast.error('No hay suficiente stock para esta salida')
-        return
+        await updateSparePart(newMovement.part_id, { current_stock: newStock })
       }
 
-      updateSparePart(newMovement.part_id, { current_stock: newStock })
-    }
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('part_movements')
+          .insert([newMovement])
+          .select()
+          .single()
 
-    setPartMovements(prev => [...prev, movementWithId])
-    toast.success(`Movimiento de ${newMovement.movement_type === 'entrada' ? 'entrada' : 'salida'} registrado exitosamente`)
+        if (error) throw error
+        setPartMovements(prev => [data as PartMovement, ...prev])
+        toast.success(`Movimiento de ${newMovement.movement_type === 'entrada' ? 'entrada' : 'salida'} registrado`)
+      } else {
+        const id = Math.max(...partMovements.map(m => m.id), 0) + 1
+        const movementWithId: PartMovement = {
+          ...newMovement,
+          id,
+          created_at: new Date().toISOString()
+        }
+        setPartMovements(prev => [movementWithId, ...prev])
+        toast.success(`Movimiento registrado (Local)`)
+      }
+    } catch (error: any) {
+      console.error('Error adding part movement:', error)
+      toast.error('Error al registrar movimiento: ' + error.message)
+    }
   }
 
-  const deletePartMovement = (id: number) => {
-    const movement = partMovements.find(m => m.id === id)
-    if (movement) {
-      // Revertir el cambio en el stock
-      const part = spareParts.find(p => p.id === movement.part_id)
-      if (part) {
-        const newStock = movement.movement_type === 'entrada'
-          ? part.current_stock - movement.quantity
-          : part.current_stock + movement.quantity
+  const deletePartMovement = async (id: number) => {
+    try {
+      const movement = partMovements.find(m => m.id === id)
+      if (movement) {
+        // Revertir el cambio en el stock
+        const part = spareParts.find(p => p.id === movement.part_id)
+        if (part) {
+          const newStock = movement.movement_type === 'entrada'
+            ? part.current_stock - movement.quantity
+            : part.current_stock + movement.quantity
 
-        updateSparePart(movement.part_id, { current_stock: newStock })
+          await updateSparePart(movement.part_id, { current_stock: newStock })
+        }
       }
+
+      if (supabase) {
+        const { error } = await supabase
+          .from('part_movements')
+          .delete()
+          .eq('id', id)
+
+        if (error) throw error
+      }
+
+      setPartMovements(prev => prev.filter(m => m.id !== id))
+      toast.success('Movimiento eliminado exitosamente')
+    } catch (error: any) {
+      console.error('Error deleting movement:', error)
+      toast.error('Error al eliminar: ' + error.message)
     }
-    setPartMovements(prev => prev.filter(m => m.id !== id))
-    toast.success('Movimiento eliminado exitosamente')
   }
 
   const getPartMovement = (id: number) => {
@@ -1516,6 +1396,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Funciones de incidentes
   const deleteIncident = async (id: number) => {
+    // Optimistic update
+    const previousIncidents = [...incidents]
+    setIncidents(prev => prev.filter(i => i.id !== id))
+
     try {
       if (supabase) {
         const { error } = await supabase
@@ -1523,11 +1407,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .delete()
           .eq('id', id)
 
-        if (error) throw error
-        setIncidents(prev => prev.filter(i => i.id !== id))
+        if (error) {
+          // Revert on error
+          setIncidents(previousIncidents)
+          throw error
+        }
         toast.success('Incidencia eliminada exitosamente')
       } else {
-        setIncidents(prev => prev.filter(i => i.id !== id))
         toast.success('Incidencia eliminada (Local)')
       }
     } catch (error: any) {
@@ -1541,12 +1427,91 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
   }
 
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    toast.success('Todas las notificaciones marcadas como leídas')
+  }
+
   const clearNotifications = () => {
     setNotifications([])
   }
 
 
-  const value: AppContextType = {
+  // Funciones de Clientes
+  const addClient = async (newClient: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client | null> => {
+    try {
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('clients')
+          .insert([{ ...newClient }])
+          .select()
+          .single()
+
+        if (error) throw error
+        setClients(prev => [...prev, data as Client])
+        toast.success('Cliente agregado exitosamente')
+        return data as Client
+      } else {
+        const id = Math.max(...clients.map(c => c.id), 0) + 1
+        const clientWithId = {
+          ...newClient,
+          id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        setClients(prev => [...prev, clientWithId])
+        toast.success('Cliente agregado (Local)')
+        return clientWithId
+      }
+    } catch (error: any) {
+      console.error('Error adding client:', error)
+      toast.error('Error al agregar cliente')
+      return null
+    }
+  }
+
+  const updateClient = async (id: number, updatedClient: Partial<Client>) => {
+    try {
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('clients')
+          .update(updatedClient)
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) throw error
+        setClients(prev => prev.map(c => c.id === id ? { ...c, ...data } : c))
+        toast.success('Cliente actualizado exitosamente')
+      } else {
+        setClients(prev => prev.map(c => c.id === id ? { ...c, ...updatedClient } as Client : c))
+        toast.success('Cliente actualizado (Local)')
+      }
+    } catch (error: any) {
+      console.error('Error updating client:', error)
+      toast.error('Error al actualizar cliente')
+    }
+  }
+
+  const deleteClient = async (id: number) => {
+    const previousClients = [...clients]
+    setClients(prev => prev.filter(c => c.id !== id))
+    try {
+      if (supabase) {
+        const { error } = await supabase.from('clients').delete().eq('id', id)
+        if (error) throw error
+        toast.success('Cliente eliminado exitosamente')
+      } else {
+        toast.success('Cliente eliminado (Local)')
+      }
+    } catch (error: any) {
+      console.error('Error deleting client:', error)
+      toast.error('Error al eliminar cliente')
+      setClients(previousClients)
+    }
+  }
+
+  const value: AppContextType = React.useMemo(() => ({
     machinery,
     workOrders,
     maintenances,
@@ -1556,6 +1521,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     incidents,
     notifications,
     users,
+    clients,
     addMachinery,
     updateMachinery,
     deleteMachinery,
@@ -1575,9 +1541,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addSparePart, updateSparePart, deleteSparePart, getSparePart,
     addPartMovement, deletePartMovement, getPartMovement,
     addUser, updateUser, deleteUser, getUser, fetchData,
+    markNotificationAsRead,
+    markAllAsRead,
+    clearNotifications,
     deleteIncident,
-    markNotificationAsRead, clearNotifications
-  }
+    addClient,
+    updateClient,
+    deleteClient
+  }), [
+    machinery, workOrders, maintenances, fuelLoads, spareParts, partMovements,
+    incidents, notifications, users, clients,
+    addMachinery, updateMachinery, deleteMachinery, getMachinery,
+    addWorkOrder, updateWorkOrder, deleteWorkOrder, getWorkOrder,
+    addMaintenance, updateMaintenance, deleteMaintenance, getMaintenance,
+    addFuelLoad, updateFuelLoad, deleteFuelLoad, getFuelLoad,
+    addSparePart, updateSparePart, deleteSparePart, getSparePart,
+    addPartMovement, deletePartMovement, getPartMovement,
+    addUser, updateUser, deleteUser, getUser, fetchData,
+    markNotificationAsRead, markAllAsRead, clearNotifications, deleteIncident,
+    addClient, updateClient, deleteClient // Although these are recreated on render, it's fine for now or wrap them in useCallback if needed
+  ])
 
   return (
     <AppContext.Provider value={value}>

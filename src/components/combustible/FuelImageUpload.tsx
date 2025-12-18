@@ -207,8 +207,8 @@ export function FuelImageUpload({
 
   const IconComponent = type === 'receipt' ? DollarSign : Camera
 
-  // Determinar si el archivo actual es un PDF
-  const isPdf = imageUrl?.startsWith('data:application/pdf')
+  // Determinar si el archivo actual es un PDF (soporta base64 y URLs de Supabase)
+  const isPdf = imageUrl?.startsWith('data:application/pdf') || imageUrl?.toLowerCase().endsWith('.pdf') || imageUrl?.includes('.pdf?')
 
   return (
     <div className="space-y-3">
@@ -221,8 +221,8 @@ export function FuelImageUpload({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragging
-              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-800'
+            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-800'
             } ${error ? 'border-red-500' : ''}`}
         >
           <input

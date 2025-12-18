@@ -10,8 +10,10 @@ import { toast } from 'react-hot-toast'
 import { WorkOrder, Machinery } from '@/contexts/AppContext'
 import {
   X, ClipboardList, Calendar, MapPin, Building2, Wrench,
-  AlertCircle, Truck, FileText, Target, Save, Activity
+  AlertCircle, Truck, FileText, Target, Save, Activity, UserPlus
 } from 'lucide-react'
+import { useApp } from '@/contexts/AppContext'
+import NewClientModal from '@/components/clients/NewClientModal'
 
 // Función para determinar qué maquinarias son relevantes para un tipo de tarea
 const getRelevantMachineryForTaskType = (taskType: string, machinery: Machinery[]): number[] => {
@@ -84,23 +86,7 @@ const getRelevantMachineryForTaskType = (taskType: string, machinery: Machinery[
   return machinery.map(m => m.id)
 }
 
-const clients = [
-  { id: 1, name: 'Agrícola San Antonio S.A.' },
-  { id: 2, name: 'Fundo El Carmen' },
-  { id: 3, name: 'Cooperativa Agrícola Los Ríos' },
-  { id: 4, name: 'Hacienda Santa Rosa' },
-  { id: 5, name: 'Agroindustria del Sur' },
-  { id: 6, name: 'Agrícola San José' },
-  { id: 7, name: 'Campo Verde Ltda.' },
-  { id: 8, name: 'Fundo Los Robles' },
-  { id: 9, name: 'Agrícola del Valle S.A.' },
-  { id: 10, name: 'Hacienda Los Alamos' },
-  { id: 11, name: 'Cooperativa Agrícola del Sur' },
-  { id: 12, name: 'Fundo La Esperanza' },
-  { id: 13, name: 'Agropecuaria Central' },
-  { id: 14, name: 'Hacienda El Mirador' },
-  { id: 15, name: 'Agrícola Los Pinos' }
-]
+// Eliminado clients hardcoded
 
 const clientsWithFields: Record<number, string[]> = {
   1: ['Potrero Norte', 'Potrero Sur', 'Sector Este', 'Lote 5', 'Campo Central'],
@@ -152,6 +138,8 @@ export function NewOrderModal({
   addWorkOrder: (workOrder: Omit<WorkOrder, 'id' | 'created_at' | 'updated_at'>) => void
   machinery: Machinery[]
 }) {
+  const { clients, fetchData } = useApp()
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false)
   const [formData, setFormData] = useState({
     client_id: 0,
     field: '',
@@ -286,25 +274,37 @@ export function NewOrderModal({
                     <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     <span>Cliente *</span>
                   </Label>
-                  <Select
-                    value={formData.client_id.toString()}
-                    onValueChange={(value) => handleInputChange('client_id', parseInt(value))}
-                  >
-                    <SelectTrigger className={`h-11 ${errors.client_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
-                      {formData.client_id > 0 ? (
-                        <span className="text-gray-900 dark:text-white">{clients.find(c => c.id === formData.client_id)?.name}</span>
-                      ) : (
-                        <SelectValue placeholder="Selecciona un cliente" className="dark:text-gray-400" />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id.toString()} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex space-x-2">
+                    <div className="flex-1">
+                      <Select
+                        value={formData.client_id > 0 ? formData.client_id.toString() : ''}
+                        onValueChange={(value) => handleInputChange('client_id', parseInt(value))}
+                      >
+                        <SelectTrigger className={`h-11 ${errors.client_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
+                          {formData.client_id > 0 ? (
+                            <span className="text-gray-900 dark:text-white">{clients.find(c => c.id === formData.client_id)?.name}</span>
+                          ) : (
+                            <SelectValue placeholder="Selecciona un cliente" className="dark:text-gray-400" />
+                          )}
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700 max-h-[200px]">
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id.toString()} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsClientModalOpen(true)}
+                      className="h-11 w-11 flex items-center justify-center rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-800"
+                      title="Crear nuevo cliente"
+                    >
+                      <UserPlus className="h-5 w-5" />
+                    </button>
+                  </div>
                   {errors.client_id && <p className="text-red-500 text-sm mt-1">{errors.client_id}</p>}
                 </div>
 
@@ -315,30 +315,35 @@ export function NewOrderModal({
                     <span>Campo *</span>
                   </Label>
                   {formData.client_id > 0 ? (
-                    <Select
-                      value={formData.field}
-                      onValueChange={(value) => handleInputChange('field', value)}
-                      disabled={availableFields.length === 0}
-                    >
-                      <SelectTrigger className={`h-11 ${errors.field ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
-                        {formData.field ? (
-                          <span className="text-gray-900 dark:text-white">{formData.field}</span>
-                        ) : (
-                          <SelectValue placeholder={availableFields.length > 0 ? "Selecciona un campo" : "No hay campos disponibles"} className="dark:text-gray-400" />
-                        )}
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        {availableFields.length > 0 ? (
-                          availableFields.map((fieldName) => (
+                    availableFields.length > 0 ? (
+                      <Select
+                        value={formData.field}
+                        onValueChange={(value) => handleInputChange('field', value)}
+                      >
+                        <SelectTrigger className={`h-11 ${errors.field ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
+                          {formData.field ? (
+                            <span className="text-gray-900 dark:text-white">{formData.field}</span>
+                          ) : (
+                            <SelectValue placeholder="Selecciona un campo" className="dark:text-gray-400" />
+                          )}
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                          {availableFields.map((fieldName) => (
                             <SelectItem key={fieldName} value={fieldName} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
                               {fieldName}
                             </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="" disabled className="dark:text-gray-400">No hay campos disponibles</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="field"
+                        value={formData.field}
+                        onChange={(e) => handleInputChange('field', e.target.value)}
+                        placeholder="Escribe el nombre del campo o potrero"
+                        className={`h-11 ${errors.field ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                      />
+                    )
                   ) : (
                     <div className="relative">
                       <Input
@@ -493,31 +498,38 @@ export function NewOrderModal({
                 )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredMachinery.length > 0 ? (
-                  filteredMachinery.map((mach) => (
-                    <label
-                      key={mach.id}
-                      className={`flex items-center space-x-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.assignedMachinery.includes(mach.id)
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.assignedMachinery.includes(mach.id)}
-                        onChange={() => handleMachineryToggle(mach.id)}
-                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:bg-gray-700"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{mach.brand} {mach.model}</span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{mach.patent}</p>
-                      </div>
-                    </label>
-                  ))
+                {formData.taskType ? (
+                  filteredMachinery.length > 0 ? (
+                    filteredMachinery.map((mach) => (
+                      <label
+                        key={mach.id}
+                        className={`flex items-center space-x-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.assignedMachinery.includes(mach.id)
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.assignedMachinery.includes(mach.id)}
+                          onChange={() => handleMachineryToggle(mach.id)}
+                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:bg-gray-700"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{mach.brand} {mach.model}</span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{mach.patent}</p>
+                        </div>
+                      </label>
+                    ))
+                  ) : (
+                    <div className="col-span-full p-6 text-center bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <Truck className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 dark:text-gray-400">No hay maquinarias disponibles para este tipo de tarea</p>
+                    </div>
+                  )
                 ) : (
                   <div className="col-span-full p-6 text-center bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <Truck className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 dark:text-gray-400">No hay maquinarias disponibles para este tipo de tarea</p>
+                    <Wrench className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Selecciona un tipo de tarea para ver las maquinarias disponibles</p>
                   </div>
                 )}
               </div>
@@ -544,6 +556,15 @@ export function NewOrderModal({
           </form>
         </div>
       </div>
+
+      <NewClientModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSuccess={(newClientId) => {
+          fetchData()
+          // Removed auto-selection as per user request
+        }}
+      />
     </div>
   )
 }
@@ -560,6 +581,7 @@ export function EditOrderModal({
   updateWorkOrder: (id: string, workOrder: Partial<WorkOrder>) => void
   machinery: Machinery[]
 }) {
+  const { clients } = useApp()
   const [formData, setFormData] = useState({
     client_id: order.client_id,
     field: order.field_name,

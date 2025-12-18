@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
-import { Plus, ClipboardList, Calendar, User, MapPin, X, Building2, Wrench, AlertCircle, Truck, FileText, Target } from 'lucide-react'
+import { Plus, ClipboardList, Calendar, User, MapPin, X, Building2, Wrench, AlertCircle, Truck, FileText, Target, UserPlus } from 'lucide-react'
+import NewClientModal from '@/components/clients/NewClientModal'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -33,8 +34,9 @@ type WorkOrderFormData = z.infer<typeof workOrderSchema>
 
 export default function NuevaOrdenTrabajoPage() {
   const router = useRouter()
-  const { addWorkOrder, machinery } = useApp()
+  const { addWorkOrder, machinery, clients, fetchData } = useApp()
   const [selectedMachinery, setSelectedMachinery] = useState<number[]>([])
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false)
 
   const {
     control,
@@ -154,53 +156,47 @@ export default function NuevaOrdenTrabajoPage() {
                       <Building2 className="h-4 w-4 text-blue-600" />
                       <span>Cliente *</span>
                     </Label>
-                    <Controller
-                      name="client_id"
-                      control={control}
-                      render={({ field }) => {
-                        const clients = [
-                          { id: 1, name: 'Agrícola San Antonio S.A.' },
-                          { id: 2, name: 'Fundo El Carmen' },
-                          { id: 3, name: 'Cooperativa Agrícola Los Ríos' },
-                          { id: 4, name: 'Hacienda Santa Rosa' },
-                          { id: 5, name: 'Agroindustria del Sur' },
-                          { id: 6, name: 'Agrícola San José' },
-                          { id: 7, name: 'Campo Verde Ltda.' },
-                          { id: 8, name: 'Fundo Los Robles' },
-                          { id: 9, name: 'Agrícola del Valle S.A.' },
-                          { id: 10, name: 'Hacienda Los Alamos' },
-                          { id: 11, name: 'Cooperativa Agrícola del Sur' },
-                          { id: 12, name: 'Fundo La Esperanza' },
-                          { id: 13, name: 'Agropecuaria Central' },
-                          { id: 14, name: 'Hacienda El Mirador' },
-                          { id: 15, name: 'Agrícola Los Pinos' }
-                        ]
+                    <div className="flex space-x-2">
+                      <div className="flex-1">
+                        <Controller
+                          name="client_id"
+                          control={control}
+                          render={({ field }) => {
+                            const selectedClient = clients.find(c => c.id === field.value)
 
-                        const selectedClient = clients.find(c => c.id === field.value)
-
-                        return (
-                          <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
-                            value={field.value > 0 ? field.value.toString() : ''}
-                          >
-                            <SelectTrigger className={`h-11 ${errors.client_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}>
-                              {selectedClient ? (
-                                <span className="text-gray-900">{selectedClient.name}</span>
-                              ) : (
-                                <span className="text-gray-500">Selecciona un cliente</span>
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              {clients.map((client) => (
-                                <SelectItem key={client.id} value={client.id.toString()}>
-                                  {client.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )
-                      }}
-                    />
+                            return (
+                              <Select
+                                onValueChange={(value) => field.onChange(parseInt(value))}
+                                value={field.value > 0 ? field.value.toString() : ''}
+                              >
+                                <SelectTrigger className={`h-11 ${errors.client_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}>
+                                  {selectedClient ? (
+                                    <span className="text-gray-900">{selectedClient.name}</span>
+                                  ) : (
+                                    <span className="text-gray-500">Selecciona un cliente</span>
+                                  )}
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {clients.map((client) => (
+                                    <SelectItem key={client.id} value={client.id.toString()}>
+                                      {client.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )
+                          }}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setIsClientModalOpen(true)}
+                        className="h-11 w-11 p-0 shrink-0 bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-200"
+                        title="Crear nuevo cliente"
+                      >
+                        <UserPlus className="h-5 w-5" />
+                      </Button>
+                    </div>
                     {errors.client_id && <p className="text-red-500 text-sm mt-1">{errors.client_id.message}</p>}
                   </div>
 
@@ -461,6 +457,14 @@ export default function NuevaOrdenTrabajoPage() {
           </CardContent>
         </Card>
       </div>
+
+      <NewClientModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSuccess={() => {
+          fetchData() // Recargar datos para ver el nuevo cliente
+        }}
+      />
     </div>
   )
 }
