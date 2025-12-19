@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { AvatarUpload } from '@/components/profile/AvatarUpload'
 import { toast } from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 
 export default function PerfilPage() {
   const { user, updateUser, updateAvatar, loading: authLoading } = useAuth()
@@ -59,7 +60,7 @@ export default function PerfilPage() {
   }
 
   // Función para comprimir imagen
-  const compressImage = (file: File, maxWidth: number = 400, maxSizeKB: number = 200): Promise<string> => {
+  const compressImage = (file: File, maxWidth: number = 400, maxSizeKB: number = 200): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = (e) => {
@@ -88,46 +89,17 @@ export default function PerfilPage() {
           ctx.imageSmoothingQuality = 'high'
           ctx.drawImage(img, 0, 0, targetWidth, targetHeight)
 
-          // Intentar diferentes niveles de calidad hasta conseguir el tamaño deseado
-          let quality = 0.8
-          let compressedBase64 = ''
-          let base64Size = 0
-          let attempts = 0
-          const maxAttempts = 10
-          const targetSizeBytes = maxSizeKB * 1024
-
-          do {
-            compressedBase64 = canvas.toDataURL('image/jpeg', quality)
-            base64Size = (compressedBase64.length * 3) / 4
-
-            // Si el tamaño es aceptable, salir del bucle
-            if (base64Size <= targetSizeBytes) {
-              break
-            }
-
-            // Reducir calidad
-            quality -= 0.1
-
-            // Si la calidad es muy baja y aún es grande, reducir dimensiones
-            if (quality < 0.5 && base64Size > targetSizeBytes && targetWidth > 200) {
-              targetWidth = Math.round(targetWidth * 0.85)
-              targetHeight = Math.round((img.height * targetWidth) / img.width)
-              canvas.width = targetWidth
-              canvas.height = targetHeight
-              ctx.clearRect(0, 0, canvas.width, canvas.height)
-              ctx.drawImage(img, 0, 0, targetWidth, targetHeight)
-              quality = 0.7 // Resetear calidad
-            }
-
-            attempts++
-          } while (base64Size > targetSizeBytes && attempts < maxAttempts && quality > 0.1)
-
-          // Si no se pudo comprimir lo suficiente, usar la última versión
-          if (!compressedBase64) {
-            compressedBase64 = canvas.toDataURL('image/jpeg', 0.7)
-          }
-
-          resolve(compressedBase64)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob)
+              } else {
+                reject(new Error('Error al comprimir la imagen'))
+              }
+            },
+            'image/jpeg',
+            0.8 // Calidad
+          )
         }
         img.onerror = () => reject(new Error('Error al cargar la imagen'))
         if (typeof e.target?.result === 'string') {
@@ -183,14 +155,40 @@ export default function PerfilPage() {
 
     try {
       console.log('📸 Procesando imagen:', file.name, file.size, 'bytes')
-      const compressedImage = await compressImage(file)
-      console.log('✅ Imagen comprimida, tamaño:', compressedImage.length, 'caracteres')
+      const compressedBlob = await compressImage(file)
+      console.log('✅ Imagen comprimida, tamaño:', compressedBlob.size, 'bytes')
+
+      const toastId = toast.loading('Subiendo imagen...')
+
+      if (!user?.id) throw new Error('Usuario no identificado')
+
+      // Subir a Supabase Storage
+      const fileName = `avatars/${user.id}_${Date.now()}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(fileName, compressedBlob, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(fileName)
+
+      toast.success('Imagen subida correctamente', { id: toastId })
+
+      console.log('✅ URL pública generada:', publicUrl)
       console.log('🔄 Actualizando avatar...')
-      await handleAvatarChange(compressedImage)
-      console.log('✅ Avatar actualizado')
-    } catch (error) {
+      await handleAvatarChange(publicUrl)
+
+    } catch (error: any) {
       console.error('❌ Error al procesar la imagen:', error)
-      toast.error('Error al procesar la imagen. Por favor, intenta con otra imagen.')
+      toast.error('Error al subir la imagen: ' + (error.message || 'Error desconocido'))
     } finally {
       // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
       if (e.target) {
