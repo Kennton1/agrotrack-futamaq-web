@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { MOCK_MACHINERY, MOCK_WORK_ORDERS, MOCK_MAINTENANCES, MOCK_FUEL_LOADS, MOCK_SPARE_PARTS, MOCK_PART_MOVEMENTS } from '@/data/mockData'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
@@ -363,6 +363,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ])
   )
 
+  // Ref para mantener el estado actual de órdenes y comparar en Realtime
+  const workOrdersRef = useRef(workOrders)
+  useEffect(() => {
+    workOrdersRef.current = workOrders
+  }, [workOrders])
+
   const fetchData = async () => {
     if (!supabase) return
 
@@ -562,6 +568,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('Realtime subscribing to fuel_loads...')
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Suscripción a actualizaciones de órdenes de trabajo
+  useEffect(() => {
+    if (!supabase) return
+
+    const channel = supabase
+      .channel('work-orders-updates-v2')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'work_orders'
+        },
+        (payload) => {
+          const newOrder = payload.new as WorkOrder
+
+          // Actualizamos datos locales
+          setWorkOrders(prev => prev.map(o => o.id === newOrder.id ? newOrder : o))
+
+          // Generar notificación siempre (para asegurar visibilidad)
+          const newNotification: Notification = {
+            id: Date.now().toString(),
+            type: 'work_order',
+            title: `Actualización OT ${newOrder.id.substring(0, 6)}...`,
+            message: `Avance: ${newOrder.progress_percentage ?? 0}% - Estado: ${(newOrder.status ?? '').toUpperCase()}`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            link: '/ordenes-trabajo'
+          }
+
+          setNotifications(prev => [newNotification, ...prev])
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Suscrito a work_orders (v3)')
         }
       })
 
@@ -1379,9 +1429,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateUser = async (id: string, updatedUser: Partial<User>) => {
-    // Implementación básica, idealmente actualizar Supabase Auth también si es necesario
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updatedUser } : u))
-    toast.success('Usuario actualizado')
+    try {
+      // Optimistic update
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updatedUser } : u))
+
+      if (supabase) {
+        // Enforce updated_at mostly
+        const payload = { ...updatedUser }
+        // Ensure we don't send fields that might not exist or be generated
+
+        const { error } = await supabase
+          .from('users')
+          .update(payload)
+          .eq('id', id)
+
+        if (error) throw error
+        toast.success('Usuario actualizado exitosamente')
+      } else {
+        toast.success('Usuario actualizado (Local)')
+      }
+    } catch (error: any) {
+      console.error('Error updating user:', error)
+      toast.error('Error al actualizar usuario: ' + error.message)
+    }
   }
 
   const deleteUser = (id: string) => {
