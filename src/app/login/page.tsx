@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
@@ -13,9 +13,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('futamaq_saved_email')
+    if (savedEmail) {
+      setEmail(savedEmail)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,6 +37,14 @@ export default function LoginPage() {
         toast.error('Error al iniciar sesión: ' + error.message)
       } else {
         toast.success('¡Bienvenido a FUTAMAQ!')
+
+        // Manejar "Recordarme"
+        if (rememberMe) {
+          localStorage.setItem('futamaq_saved_email', email)
+        } else {
+          localStorage.removeItem('futamaq_saved_email')
+        }
+
         // Pequeño delay para asegurar que el estado se actualice
         setTimeout(() => {
           window.location.href = '/dashboard'
@@ -125,9 +142,11 @@ export default function LoginPage() {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 cursor-pointer">
                     Recordarme
                   </label>
                 </div>
@@ -153,25 +172,7 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">¿No tienes cuenta?</span>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                  onClick={() => router.push('/register')}
-                >
-                  Crear Cuenta
-                </Button>
-              </div>
+              {/* "Create Account" option removed as per requirements. Admin manages users internally. */}
             </div>
           </CardContent>
         </Card>

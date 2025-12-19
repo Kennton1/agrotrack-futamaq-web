@@ -33,7 +33,7 @@ interface FilterOptions {
 }
 
 export default function ReportesPage() {
-  const { machinery, workOrders, maintenances, fuelLoads, spareParts, partMovements } = useApp()
+  const { machinery, workOrders, maintenances, fuelLoads, spareParts, partMovements, clients } = useApp()
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
   const [activeFilters, setActiveFilters] = useState<FilterOptions>({
@@ -764,6 +764,7 @@ export default function ReportesPage() {
         onExport={handleExport}
         machinery={machinery}
         workOrders={workOrders}
+        clients={clients}
         currentFilters={activeFilters}
       />
 

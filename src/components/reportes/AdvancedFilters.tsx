@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent } from '@/components/ui/Card'
+import { useState, useRef, useEffect } from 'react'
+import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
-import { 
-  Filter, Calendar, CalendarDays, TrendingUp, BarChart3, 
-  PieChart, Download, RefreshCw, X, ChevronDown, ChevronUp
+import {
+  Filter, Calendar, BarChart3,
+  Download, RefreshCw, X, ChevronDown, Check
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface AdvancedFiltersProps {
   onApplyFilters: (filters: FilterOptions) => void
@@ -17,6 +18,7 @@ interface AdvancedFiltersProps {
   className?: string
   machinery?: Array<{ id: number; code: string; brand: string; model: string }>
   workOrders?: Array<{ client_id: number; assigned_operator?: string; assigned_operators?: string[] }>
+  clients?: Array<{ id: number; name: string }>
   currentFilters?: FilterOptions
 }
 
@@ -30,7 +32,7 @@ export interface FilterOptions {
   }
   machinery: string[]
   clients: string[]
-  operators: string[]
+  operators: string[] // Kept for compatibility but UI removed
   status: string[]
   priority: string[]
   reportType: 'summary' | 'detailed' | 'analytics'
@@ -38,13 +40,80 @@ export interface FilterOptions {
   includeCharts: boolean
 }
 
-export function AdvancedFilters({ 
-  onApplyFilters, 
-  onClearFilters, 
-  onExport, 
+// Helper component for floating multi-select dropdowns
+function FilterDropdown({
+  label,
+  count,
+  isOpen,
+  onToggle,
+  onClose,
+  children
+}: {
+  label: string,
+  count: number,
+  isOpen: boolean,
+  onToggle: () => void,
+  onClose: () => void,
+  children: React.ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        onClose()
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen, onClose])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button" // Prevent form submission
+        onClick={onToggle}
+        className={cn(
+          "flex items-center space-x-2 px-3 py-2 text-sm border rounded-lg transition-colors",
+          isOpen
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+            : count > 0
+              ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-900/10 text-gray-900 dark:text-gray-100"
+              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        )}
+      >
+        <span className="font-medium">{label}</span>
+        {count > 0 && (
+          <Badge variant="info" className="ml-1 h-5 px-1.5 text-[10px] min-w-[20px] justify-center">
+            {count}
+          </Badge>
+        )}
+        <ChevronDown className={cn("h-3.5 w-3.5 ml-1 transition-transform", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-left">
+          <div className="max-h-60 overflow-y-auto p-2 space-y-1">
+            {children}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function AdvancedFilters({
+  onApplyFilters,
+  onClearFilters,
+  onExport,
   className = '',
   machinery = [],
   workOrders = [],
+  clients = [],
   currentFilters
 }: AdvancedFiltersProps) {
   const defaultFilters: FilterOptions = {
@@ -61,19 +130,19 @@ export function AdvancedFilters({
     includeCharts: true
   }
 
-  const [isExpanded, setIsExpanded] = useState(false)
+  // Which dropdown is currently open
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+
   const [filters, setFilters] = useState<FilterOptions>(
     currentFilters || defaultFilters
   )
 
-  // Sincronizar con currentFilters cuando cambien desde fuera
   useEffect(() => {
     if (currentFilters) {
       setFilters(currentFilters)
     }
   }, [currentFilters])
 
-  // Aplicar filtros automáticamente cuando cambien
   const applyFilters = (newFilters: FilterOptions) => {
     setFilters(newFilters)
     onApplyFilters(newFilters)
@@ -94,10 +163,10 @@ export function AdvancedFilters({
 
   const handleMultiSelectChange = (key: string, value: string, checked: boolean) => {
     const currentArray = filters[key as keyof FilterOptions] as string[]
-    const newArray = checked 
+    const newArray = checked
       ? [...currentArray, value]
       : currentArray.filter(item => item !== value)
-    
+
     const newFilters = {
       ...filters,
       [key]: newArray
@@ -105,9 +174,18 @@ export function AdvancedFilters({
     applyFilters(newFilters)
   }
 
+  const handleToggleAll = (key: string, options: any[], checked: boolean) => {
+    const newFilters = {
+      ...filters,
+      [key]: checked ? options.map(opt => opt.value) : []
+    }
+    applyFilters(newFilters)
+  }
+
   const clearFilters = () => {
     applyFilters(defaultFilters)
     onClearFilters()
+    setOpenDropdown(null)
   }
 
   const countActiveFilters = () => {
@@ -115,85 +193,35 @@ export function AdvancedFilters({
     if (filters.dateRange.type !== 'all') count++
     if (filters.machinery.length > 0) count++
     if (filters.clients.length > 0) count++
-    if (filters.operators.length > 0) count++
+    // Operators removed from UI count
     if (filters.status.length > 0) count++
     if (filters.priority.length > 0) count++
     return count
   }
 
-  // Opciones predefinidas
+  // Options
   const dateRangeOptions = [
+    { value: 'all', label: 'Todo el período' },
     { value: 'last_7_days', label: 'Últimos 7 días' },
     { value: 'last_30_days', label: 'Últimos 30 días' },
     { value: 'current_month', label: 'Mes Actual' },
-    { value: 'current_year', label: 'Año Actual' },
     { value: 'last_month', label: 'Mes Anterior' },
-    { value: 'last_quarter', label: 'Trimestre Anterior' },
-    { value: 'last_year', label: 'Año Anterior' },
-    { value: 'custom', label: 'Rango Personalizado' },
-    { value: 'all', label: 'Todo el período' }
+    { value: 'custom', label: 'Rango Personalizado' }
   ]
 
-  const reportTypeOptions = [
-    { value: 'summary', label: 'Resumen Ejecutivo' },
-    { value: 'detailed', label: 'Reporte Detallado' },
-    { value: 'analytics', label: 'Análisis Avanzado' }
-  ]
-
-  const groupByOptions = [
-    { value: 'date', label: 'Por Fecha' },
-    { value: 'machinery', label: 'Por Maquinaria' },
-    { value: 'client', label: 'Por Cliente' },
-    { value: 'operator', label: 'Por Operador' },
-    { value: 'status', label: 'Por Estado' }
-  ]
-
-  // Obtener opciones dinámicas desde los datos
-  const machineryOptions = machinery.length > 0 
+  const machineryOptions = machinery.length > 0
     ? machinery.map(m => ({
-        value: m.id.toString(),
-        label: `${m.code} - ${m.brand} ${m.model}`
-      }))
-    : [
-        { value: '1', label: 'T001 - John Deere 6120M' },
-        { value: '2', label: 'T002 - Case IH Puma 165' },
-        { value: '3', label: 'C001 - New Holland CR6.80' }
-      ]
+      value: m.id.toString(),
+      label: `${m.code} - ${m.brand} ${m.model}`
+    }))
+    : []
 
-  const uniqueClientIds = Array.from(new Set(workOrders.map(wo => wo.client_id)))
-  const clientLabels: { [key: number]: string } = {
-    1: 'Agrícola Los Robles S.A.',
-    2: 'Cooperativa Campesina Valdivia',
-    3: 'Fundo El Carmen',
-    4: 'Agroindustria del Sur',
-    5: 'Hacienda Santa Rosa'
-  }
-  const clientOptions = uniqueClientIds.length > 0
-    ? uniqueClientIds.map(clientId => ({
-        value: clientId.toString(),
-        label: clientLabels[clientId] || `Cliente ${clientId}`
-      }))
-    : [
-        { value: '1', label: 'Agrícola Los Robles S.A.' },
-        { value: '2', label: 'Cooperativa Campesina Valdivia' },
-        { value: '3', label: 'Fundo El Carmen' }
-      ]
-
-  const uniqueOperators = Array.from(new Set(
-    workOrders
-      .map(wo => wo.assigned_operator)
-      .filter((op): op is string => op !== undefined && op !== null && op.trim() !== '')
-  ))
-  const operatorOptions = uniqueOperators.length > 0
-    ? uniqueOperators.map(operator => ({
-        value: operator!,
-        label: operator!
-      }))
-    : [
-        { value: 'Juan Pérez', label: 'Juan Pérez' },
-        { value: 'Carlos Rodríguez', label: 'Carlos Rodríguez' },
-        { value: 'María González', label: 'María González' }
-      ]
+  const clientOptions = clients.length > 0
+    ? clients.map(c => ({
+      value: c.id.toString(),
+      label: c.name
+    }))
+    : []
 
   const statusOptions = [
     { value: 'planificada', label: 'Planificada' },
@@ -209,313 +237,168 @@ export function AdvancedFilters({
     { value: 'critica', label: 'Crítica' }
   ]
 
-  const renderMultiSelect = (options: any[], key: string, label: string) => {
-    const selectedCount = (filters[key as keyof FilterOptions] as string[]).length
+  const renderDropdownContent = (options: any[], key: string) => {
     const selectedValues = filters[key as keyof FilterOptions] as string[]
-    
+    const allSelected = options.length > 0 && selectedValues.length === options.length
+
+    if (options.length === 0) {
+      return <p className="text-sm text-gray-500 py-2 text-center">No hay opciones</p>
+    }
+
     return (
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          {label}
-          {selectedCount > 0 && (
-            <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">({selectedCount} seleccionado{selectedCount > 1 ? 's' : ''})</span>
-          )}
+      <div className="space-y-1">
+        <label className="flex items-center space-x-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 mb-1">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={(e) => handleToggleAll(key, options, e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Seleccionar todos</span>
         </label>
-        <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-3 space-y-2 bg-gray-50 dark:bg-gray-800">
-          {options.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No hay opciones disponibles</p>
-          ) : (
-            <>
-              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 pb-2 border-b border-gray-200 dark:border-gray-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedCount === options.length && options.length > 0}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      const allValues = options.map(opt => opt.value)
-                      const newFilters = { ...filters, [key]: allValues }
-                      applyFilters(newFilters)
-                    } else {
-                      const newFilters = { ...filters, [key]: [] }
-                      applyFilters(newFilters)
-                    }
-                  }}
-                  className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:checked:bg-blue-600"
-                />
-                <span>{selectedCount === options.length ? 'Deseleccionar todos' : 'Seleccionar todos'}</span>
-              </label>
-              {options.map((option) => (
-                <label key={option.value} className="flex items-center space-x-2 text-sm hover:bg-white dark:hover:bg-gray-700/50 px-2 py-1 rounded cursor-pointer text-gray-700 dark:text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={selectedValues.includes(option.value)}
-                    onChange={(e) => handleMultiSelectChange(key, option.value, e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:checked:bg-blue-600 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="flex-1">{option.label}</span>
-                </label>
-              ))}
-            </>
-          )}
-        </div>
+        {options.map((option) => (
+          <label key={option.value} className="flex items-center space-x-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedValues.includes(option.value)}
+              onChange={(e) => handleMultiSelectChange(key, option.value, e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{option.label}</span>
+            {selectedValues.includes(option.value) && <Check className="h-3 w-3 text-blue-600" />}
+          </label>
+        ))}
       </div>
     )
   }
 
   return (
-    <Card variant="modern" className={className}>
-      {/* Header clickeable */}
-      <div 
-        className="px-6 py-5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-200/50 dark:border-gray-700"
-        onClick={() => setIsExpanded(!isExpanded)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setIsExpanded(!isExpanded)
-          }
-        }}
-      >
-        <div className="flex items-center justify-between">
+    <Card className={cn("w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700", className)}>
+      <div className="p-4 space-y-4">
+        {/* Top Bar: Title + Key Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center text-gray-900 dark:text-white">
-            <Filter className="h-5 w-5 mr-2 text-gray-700 dark:text-gray-300" />
-            <span className="font-bold text-lg">Filtros Avanzados</span>
+            <Filter className="h-4 w-4 mr-2 text-blue-500" />
+            <h3 className="font-semibold text-lg">Filtros Avanzados</h3>
             {countActiveFilters() > 0 && (
-              <Badge variant="warning" className="ml-2">
-                {countActiveFilters()} filtros activos
-              </Badge>
+              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-normal">
+                ({countActiveFilters()} activo{countActiveFilters() !== 1 ? 's' : ''})
+              </span>
             )}
           </div>
-          <div className="flex items-center space-x-2">
-            {isExpanded ? (
-              <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+
+          <div className="flex items-center gap-2">
+            {countActiveFilters() > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 h-8"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Limpiar
+              </Button>
             )}
+            <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1 hidden md:block"></div>
+            {/* Report Type Selector Compact */}
+            <select
+              value={filters.reportType}
+              onChange={(e) => handleFilterChange('reportType', e.target.value)}
+              className="h-9 px-3 text-sm border-0 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="summary">Resumen</option>
+              <option value="detailed">Detallado</option>
+              <option value="analytics">Análisis</option>
+            </select>
           </div>
         </div>
-      </div>
 
-      {/* Contenido desplegable */}
-      {isExpanded && (
-        <CardContent className="space-y-6">
-          {/* Resumen de filtros activos */}
-          {countActiveFilters() > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
-              <p className="text-sm text-blue-800 dark:text-blue-300">
-                <strong>{countActiveFilters()}</strong> filtro{countActiveFilters() > 1 ? 's' : ''} activo{countActiveFilters() > 1 ? 's' : ''}. 
-                Los datos mostrados están siendo filtrados.
-              </p>
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Date Range - Always Visible */}
+          <div className="flex items-center gap-2">
+            <select
+              value={filters.dateRange.type}
+              onChange={(e) => handleDateRangeChange('type', e.target.value)}
+              className="h-9 pl-3 pr-8 py-1 text-sm border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+            >
+              {dateRangeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {filters.dateRange.type === 'custom' && (
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+              <input
+                type="date"
+                value={filters.dateRange.startDate || ''}
+                onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
+                className="h-7 text-xs border-0 bg-transparent focus:ring-0 text-gray-700 dark:text-gray-300"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="date"
+                value={filters.dateRange.endDate || ''}
+                onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
+                className="h-7 text-xs border-0 bg-transparent focus:ring-0 text-gray-700 dark:text-gray-300"
+              />
             </div>
           )}
 
-          {/* Rango de fechas */}
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              Período de Reporte
-            </h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Período</label>
-                <select
-                  value={filters.dateRange.type}
-                  onChange={(e) => handleDateRangeChange('type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  {dateRangeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {filters.dateRange.type === 'all' && (
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">✓ Mostrando todas las órdenes sin filtrar por fecha</p>
-                )}
-                {filters.dateRange.type === 'last_7_days' && (
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">✓ Mostrando datos de los últimos 7 días</p>
-                )}
-                {filters.dateRange.type === 'last_30_days' && (
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">✓ Mostrando datos de los últimos 30 días</p>
-                )}
-              </div>
+          <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 text-gray-400 hidden md:block"></div>
 
-              {filters.dateRange.type === 'custom' && (
-                <>
-                  <div>
-                    <Input
-                      label="Fecha Inicio"
-                      type="date"
-                      value={filters.dateRange.startDate || ''}
-                      onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      label="Fecha Fin"
-                      type="date"
-                      value={filters.dateRange.endDate || ''}
-                      onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
+          {/* Entity Filters Dropdowns */}
+          <FilterDropdown
+            label="Maquinarias"
+            count={filters.machinery.length}
+            isOpen={openDropdown === 'machinery'}
+            onToggle={() => setOpenDropdown(openDropdown === 'machinery' ? null : 'machinery')}
+            onClose={() => setOpenDropdown(null)}
+          >
+            {renderDropdownContent(machineryOptions, 'machinery')}
+          </FilterDropdown>
 
-              {filters.dateRange.type === 'month' && (
-                <div>
-                  <Input
-                    label="Mes y Año"
-                    type="month"
-                    value={filters.dateRange.month || ''}
-                    onChange={(e) => handleDateRangeChange('month', e.target.value)}
-                  />
-                </div>
-              )}
+          <FilterDropdown
+            label="Clientes"
+            count={filters.clients.length}
+            isOpen={openDropdown === 'clients'}
+            onToggle={() => setOpenDropdown(openDropdown === 'clients' ? null : 'clients')}
+            onClose={() => setOpenDropdown(null)}
+          >
+            {renderDropdownContent(clientOptions, 'clients')}
+          </FilterDropdown>
 
-              {filters.dateRange.type === 'year' && (
-                <div>
-                  <Input
-                    label="Año"
-                    type="number"
-                    value={filters.dateRange.year || ''}
-                    onChange={(e) => handleDateRangeChange('year', e.target.value)}
-                    placeholder="2024"
-                  />
-                </div>
-              )}
-            </div>
+          <FilterDropdown
+            label="Estados"
+            count={filters.status.length}
+            isOpen={openDropdown === 'status'}
+            onToggle={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+            onClose={() => setOpenDropdown(null)}
+          >
+            {renderDropdownContent(statusOptions, 'status')}
+          </FilterDropdown>
+
+          <FilterDropdown
+            label="Prioridad"
+            count={filters.priority.length}
+            isOpen={openDropdown === 'priority'}
+            onToggle={() => setOpenDropdown(openDropdown === 'priority' ? null : 'priority')}
+            onClose={() => setOpenDropdown(null)}
+          >
+            {renderDropdownContent(priorityOptions, 'priority')}
+          </FilterDropdown>
+
+          <div className="flex-1"></div>
+
+          {/* Export Actions (Mini) */}
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button onClick={() => onExport('pdf')} className="p-1.5 hover:bg-white dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 transition-colors" title="Exportar PDF"><Download className="h-3.5 w-3.5" /></button>
           </div>
-
-          {/* Filtros por entidades */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {renderMultiSelect(machineryOptions, 'machinery', 'Maquinarias')}
-            {renderMultiSelect(clientOptions, 'clients', 'Clientes')}
-            {renderMultiSelect(operatorOptions, 'operators', 'Operadores')}
-            {renderMultiSelect(statusOptions, 'status', 'Estados')}
-            {renderMultiSelect(priorityOptions, 'priority', 'Prioridades')}
-          </div>
-
-          {/* Configuración del reporte */}
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Seleccionar Tipo y Formato del Reporte
-            </h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Seleccionar Tipo de Reporte</label>
-                <select
-                  value={filters.reportType}
-                  onChange={(e) => handleFilterChange('reportType', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  {reportTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Seleccionar Agrupación</label>
-                <select
-                  value={filters.groupBy}
-                  onChange={(e) => handleFilterChange('groupBy', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  {groupByOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="includeCharts"
-                  checked={filters.includeCharts}
-                  onChange={(e) => handleFilterChange('includeCharts', e.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:checked:bg-blue-600"
-                />
-                <label htmlFor="includeCharts" className="text-sm text-gray-700 dark:text-gray-300">
-                  Incluir gráficos
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Botones de acción */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearFilters}
-                className="flex items-center space-x-1"
-              >
-                <X className="h-4 w-4" />
-                <span>Limpiar Filtros</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  applyFilters(defaultFilters)
-                  onClearFilters()
-                }}
-                className="flex items-center space-x-1"
-              >
-                <RefreshCw className="h-4 w-4" />
-                <span>Resetear</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Exportación */}
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar Reporte
-            </h4>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onExport('pdf')}
-                className="flex items-center space-x-1"
-              >
-                <Download className="h-4 w-4" />
-                <span>PDF</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onExport('excel')}
-                className="flex items-center space-x-1"
-              >
-                <Download className="h-4 w-4" />
-                <span>Excel</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onExport('csv')}
-                className="flex items-center space-x-1"
-              >
-                <Download className="h-4 w-4" />
-                <span>CSV</span>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      )}
+        </div>
+      </div>
     </Card>
   )
 }

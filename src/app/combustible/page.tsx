@@ -1476,11 +1476,13 @@ function NewFuelLoadModal({
                           )}
                         </SelectTrigger>
                         <SelectContent>
-                          {machinery.map((mach) => (
-                            <SelectItem key={mach.id} value={mach.id.toString()}>
-                              {mach.brand} {mach.model} ({mach.patent})
-                            </SelectItem>
-                          ))}
+                          {machinery
+                            .filter(m => ['tractor', 'camion'].includes(m.type) || (m.type === 'cosechadora' && m.fuel_capacity > 0))
+                            .map((mach) => (
+                              <SelectItem key={mach.id} value={mach.id.toString()}>
+                                {mach.brand} {mach.model} ({mach.patent})
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     )
@@ -1900,11 +1902,13 @@ function EditFuelLoadModal({
                             )}
                           </SelectTrigger>
                           <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                            {machinery.map((mach) => (
-                              <SelectItem key={mach.id} value={mach.id.toString()} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
-                                {mach.brand} {mach.model} ({mach.patent})
-                              </SelectItem>
-                            ))}
+                            {machinery
+                              .filter(m => ['tractor', 'camion'].includes(m.type) || (m.type === 'cosechadora' && m.fuel_capacity > 0))
+                              .map((mach) => (
+                                <SelectItem key={mach.id} value={mach.id.toString()} className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">
+                                  {mach.brand} {mach.model} ({mach.patent})
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       )
