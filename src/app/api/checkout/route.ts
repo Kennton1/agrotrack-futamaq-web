@@ -12,13 +12,12 @@ export async function POST(request: Request) {
 
         // Aquí recibimos qué plan quiere comprar el usuario
         const { planTitle, price, payer_email } = body;
-
-        // URL Base robusta - COMENTADA: Usando hardcode temporal
-        // const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
-
         // Inicializamos la API de Checkouts (Preference - Pago Único)
-        // Cambiamos a esto temporalmente porque es más permisivo probando en Sandbox
         const preference = new Preference(client);
+
+        // Determinar URL base y si es entorno local
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+        const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
 
         const preferenceData = {
             body: {
@@ -34,13 +33,14 @@ export async function POST(request: Request) {
                 payer: {
                     email: payer_email || 'test_user_generic@test.com'
                 },
-                // URLs de retorno dinámicas (Prod vs Local)
+                // URLs de retorno dinámicas
                 back_urls: {
-                    success: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/success`,
-                    failure: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/dashboard?payment=failure`,
-                    pending: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/dashboard?payment=pending`,
+                    success: `${baseUrl}/success`,
+                    failure: `${baseUrl}/dashboard?payment=failure`,
+                    pending: `${baseUrl}/dashboard?payment=pending`,
                 },
-                auto_return: 'approved', // En PROD funciona perfecto. En Localhost puede fallar, pero es el comportamiento deseado.
+                // Solo activar auto_return si NO es local (para evitar error 500)
+                auto_return: isLocal ? undefined : 'approved',
                 binary_mode: true,
             }
         };
