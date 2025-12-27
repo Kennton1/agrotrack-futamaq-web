@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { Truck, Mail, Phone, MapPin } from 'lucide-react'
+import { BRANDING } from '@/lib/branding'
 
 export default function Footer() {
   const router = useRouter()
@@ -17,39 +18,39 @@ export default function Footer() {
               <Truck className="h-3 w-3 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">FUTAMAQ</h3>
-              <p className="text-xs text-gray-400">Sistema Agrícola</p>
+              <h3 className="text-sm font-bold text-white">{BRANDING.appName.toUpperCase()}</h3>
+              <p className="text-xs text-gray-400">{BRANDING.systemName}</p>
             </div>
           </div>
 
           {/* Enlaces rápidos */}
           <div className="flex items-center space-x-6">
-            <button 
-              onClick={() => router.push('/dashboard')} 
+            <button
+              onClick={() => router.push('/dashboard')}
               className="text-xs text-gray-300 hover:text-white transition-colors duration-200 cursor-pointer"
             >
               Dashboard
             </button>
-            <button 
-              onClick={() => router.push('/ordenes-trabajo')} 
+            <button
+              onClick={() => router.push('/ordenes-trabajo')}
               className="text-xs text-gray-300 hover:text-white transition-colors duration-200 cursor-pointer"
             >
               Órdenes
             </button>
-            <button 
-              onClick={() => router.push('/maquinarias')} 
+            <button
+              onClick={() => router.push('/maquinarias')}
               className="text-xs text-gray-300 hover:text-white transition-colors duration-200 cursor-pointer"
             >
               Maquinarias
             </button>
-            <button 
-              onClick={() => router.push('/mantenimientos')} 
+            <button
+              onClick={() => router.push('/mantenimientos')}
               className="text-xs text-gray-300 hover:text-white transition-colors duration-200 cursor-pointer"
             >
               Mantenimientos
             </button>
-            <button 
-              onClick={() => router.push('/reportes')} 
+            <button
+              onClick={() => router.push('/reportes')}
               className="text-xs text-gray-300 hover:text-white transition-colors duration-200 cursor-pointer"
             >
               Reportes
@@ -59,7 +60,7 @@ export default function Footer() {
           {/* Copyright y enlaces legales */}
           <div className="flex items-center space-x-4">
             <p className="text-xs text-gray-400">
-              © 2024 FUTAMAQ
+              © {new Date().getFullYear()} {BRANDING.companyName}
             </p>
             <div className="flex space-x-3">
               <a href="#" className="text-xs text-gray-400 hover:text-white transition-colors duration-200">Privacidad</a>
@@ -69,6 +70,6 @@ export default function Footer() {
           </div>
         </div>
       </div>
-    </footer>
+    </footer >
   )
 }

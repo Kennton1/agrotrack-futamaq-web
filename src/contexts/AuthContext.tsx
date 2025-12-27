@@ -8,7 +8,7 @@ interface User {
   id: string
   email: string
   full_name: string
-  role: 'administrador' | 'operador' | 'cliente'
+  role: 'administrador' | 'operador' | 'cliente' | 'mecanico' | 'trabajador'
   is_active: boolean
   created_at: string
   last_login: string
@@ -19,9 +19,9 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>
+  signUp: (email: string, password: string, fullName: string, role?: 'administrador' | 'operador' | 'cliente' | 'mecanico' | 'trabajador') => Promise<{ error: any }>
   signOut: () => Promise<void>
-  updateUser: (data: { full_name?: string; role?: 'administrador' | 'operador' | 'cliente'; avatar_url?: string | null }) => Promise<{ error: any }>
+  updateUser: (data: { full_name?: string; role?: 'administrador' | 'operador' | 'cliente' | 'mecanico' | 'trabajador'; avatar_url?: string | null }) => Promise<{ error: any }>
   updateAvatar: (avatarUrl: string | null) => Promise<void>
 }
 
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null }
   }
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, role: 'administrador' | 'operador' | 'cliente' | 'mecanico' | 'trabajador' = 'operador') => {
     setLoading(true)
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: {
         data: {
           full_name: fullName,
-          role: 'operador', // Rol por defecto
+          role: role,
         },
       },
     })
@@ -130,13 +130,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await supabase.auth.signOut()
       setUser(null)
-      router.push('/login')
+      router.push('/')
     } catch (error) {
       console.error('Error signing out:', error)
     }
   }
 
-  const updateUser = async (data: { full_name?: string; role?: 'administrador' | 'operador' | 'cliente'; avatar_url?: string | null }) => {
+  const updateUser = async (data: { full_name?: string; role?: 'administrador' | 'operador' | 'cliente' | 'mecanico' | 'trabajador'; avatar_url?: string | null }) => {
     if (!user) return { error: { message: 'No hay usuario autenticado' } }
 
     const { error } = await supabase.auth.updateUser({

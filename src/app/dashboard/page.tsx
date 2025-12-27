@@ -16,7 +16,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { machinery, workOrders, maintenances, spareParts, fuelLoads, fetchData } = useApp()
+  const { machinery, workOrders, maintenances, spareParts, fuelLoads, fetchData, currentUser } = useApp()
   const [loading, setLoading] = useState(true)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
@@ -241,26 +241,28 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card
-          onClick={() => router.push('/usuarios')}
-          variant="modern"
-          className="group bg-gradient-to-br from-secondary-50 via-secondary-100/50 to-info-50/30 border-secondary-200/50 dark:bg-gray-800 dark:border-gray-700 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl"
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-secondary-700 dark:text-white mb-1">Usuarios</p>
-                <p className="text-4xl font-bold text-secondary-900 dark:text-white mb-2">{users.length}</p>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 px-2 py-1 rounded-full border border-indigo-300 dark:border-indigo-700">Activos</span>
+        {currentUser?.role === 'administrador' && (
+          <Card
+            onClick={() => router.push('/usuarios')}
+            variant="modern"
+            className="group bg-gradient-to-br from-secondary-50 via-secondary-100/50 to-info-50/30 border-secondary-200/50 dark:bg-gray-800 dark:border-gray-700 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-secondary-700 dark:text-white mb-1">Usuarios</p>
+                  <p className="text-4xl font-bold text-secondary-900 dark:text-white mb-2">{users.length}</p>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 px-2 py-1 rounded-full border border-indigo-300 dark:border-indigo-700">Activos</span>
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-secondary rounded-2xl  shadow-lg dark:bg-secondary-600">
+                  <Users className="h-10 w-10 text-white" />
                 </div>
               </div>
-              <div className="p-4 bg-gradient-secondary rounded-2xl  shadow-lg dark:bg-secondary-600">
-                <Users className="h-10 w-10 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Fila superior: Centro de Gestión y Alertas y Tareas */}
@@ -567,198 +569,201 @@ export default function DashboardPage() {
       </div>
 
       {/* Fila inferior: Costos de Mantenimiento y Consumo de Combustible */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Costos de Mantenimiento */}
-        <Card variant="modern" className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/20 border-blue-200/50 dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader variant="gradient" className="bg-gradient-to-r from-blue-500 to-blue-600 dark:bg-blue-600">
-            <div className="flex items-center justify-between">
-              <CardTitle variant="gradient" className="flex items-center space-x-3">
-                <div className="p-2 bg-white/20 rounded-xl">
-                  <Wrench className="h-6 w-6" />
+      {/* Fila inferior: Costos de Mantenimiento y Consumo de Combustible */}
+      {currentUser?.role === 'administrador' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Costos de Mantenimiento */}
+          <Card variant="modern" className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/20 border-blue-200/50 dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader variant="gradient" className="bg-gradient-to-r from-blue-500 to-blue-600 dark:bg-blue-600">
+              <div className="flex items-center justify-between">
+                <CardTitle variant="gradient" className="flex items-center space-x-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Wrench className="h-6 w-6" />
+                  </div>
+                  <span>Costos de Mantenimiento</span>
+                </CardTitle>
+                <div className="flex items-center space-x-2 bg-white/20 rounded-xl px-3 py-1">
+                  <TrendingDown className="h-4 w-4 text-white" />
+                  <span className="text-sm font-semibold text-white">-5.2%</span>
                 </div>
-                <span>Costos de Mantenimiento</span>
-              </CardTitle>
-              <div className="flex items-center space-x-2 bg-white/20 rounded-xl px-3 py-1">
-                <TrendingDown className="h-4 w-4 text-white" />
-                <span className="text-sm font-semibold text-white">-5.2%</span>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 chart-container">
-            <div className="h-80 chart-area">
-              <ResponsiveContainer
-                width="100%"
-                height="100%"
-              >
-                <BarChart
-                  data={maintenanceCostsData}
-                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+            </CardHeader>
+            <CardContent className="p-6 chart-container">
+              <div className="h-80 chart-area">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis
-                    dataKey="mes"
-                    stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
-                    fontSize={12}
-                    tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
-                  />
-                  <YAxis
-                    stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
-                    fontSize={12}
-                    tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
-                    tickFormatter={(value) => formatCLP(typeof value === 'number' ? value : Number(value))}
-                  />
-                  <Tooltip
-                    cursor={false}
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload || !payload.length) return null
-                      const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
-                      return (
-                        <div style={{
-                          backgroundColor: isDark ? '#1F2937' : 'white',
-                          border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          boxShadow: isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                          padding: '12px',
-                          color: isDark ? '#E7E9EA' : '#0F1419'
-                        }}>
-                          <p style={{
-                            margin: '0 0 8px 0',
-                            fontWeight: 'bold',
+                  <BarChart
+                    data={maintenanceCostsData}
+                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
+                    <XAxis
+                      dataKey="mes"
+                      stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
+                      fontSize={12}
+                      tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
+                    />
+                    <YAxis
+                      stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
+                      fontSize={12}
+                      tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
+                      tickFormatter={(value) => formatCLP(typeof value === 'number' ? value : Number(value))}
+                    />
+                    <Tooltip
+                      cursor={false}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || !payload.length) return null
+                        const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
+                        return (
+                          <div style={{
+                            backgroundColor: isDark ? '#1F2937' : 'white',
+                            border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            boxShadow: isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            padding: '12px',
                             color: isDark ? '#E7E9EA' : '#0F1419'
                           }}>
-                            {label}
-                          </p>
-                          {payload.map((entry: any, index: number) => (
-                            <p key={index} style={{
-                              margin: '4px 0',
+                            <p style={{
+                              margin: '0 0 8px 0',
+                              fontWeight: 'bold',
                               color: isDark ? '#E7E9EA' : '#0F1419'
                             }}>
-                              <span style={{ color: entry.color }}>●</span> {entry.name}: {formatCLP(typeof entry.value === 'number' ? entry.value : Number(entry.value))}
+                              {label}
                             </p>
-                          ))}
-                        </div>
-                      )
-                    }}
-                  />
-                  <Bar dataKey="preventivo" stackId="a" fill="#8ba394" name="Preventivo" />
-                  <Bar dataKey="correctivo" stackId="a" fill="#64748b" name="Correctivo" />
-                  <Bar dataKey="emergencia" stackId="a" fill="#dc2626" name="Emergencia" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200/50 dark:border-green-800/50">
-                <p className="text-xs text-green-600 dark:text-green-400 font-medium">Preventivo</p>
-                <p className="text-sm font-bold text-green-800 dark:text-green-300">{formatCLP(5130000)}</p>
+                            {payload.map((entry: any, index: number) => (
+                              <p key={index} style={{
+                                margin: '4px 0',
+                                color: isDark ? '#E7E9EA' : '#0F1419'
+                              }}>
+                                <span style={{ color: entry.color }}>●</span> {entry.name}: {formatCLP(typeof entry.value === 'number' ? entry.value : Number(entry.value))}
+                              </p>
+                            ))}
+                          </div>
+                        )
+                      }}
+                    />
+                    <Bar dataKey="preventivo" stackId="a" fill="#8ba394" name="Preventivo" />
+                    <Bar dataKey="correctivo" stackId="a" fill="#64748b" name="Correctivo" />
+                    <Bar dataKey="emergencia" stackId="a" fill="#dc2626" name="Emergencia" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-              <div className="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Correctivo</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{formatCLP(2160000)}</p>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200/50 dark:border-green-800/50">
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium">Preventivo</p>
+                  <p className="text-sm font-bold text-green-800 dark:text-green-300">{formatCLP(5130000)}</p>
+                </div>
+                <div className="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Correctivo</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{formatCLP(2160000)}</p>
+                </div>
+                <div className="text-center p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200/50 dark:border-red-800/50">
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">Emergencia</p>
+                  <p className="text-sm font-bold text-red-800 dark:text-red-300">{formatCLP(1110000)}</p>
+                </div>
               </div>
-              <div className="text-center p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200/50 dark:border-red-800/50">
-                <p className="text-xs text-red-600 dark:text-red-400 font-medium">Emergencia</p>
-                <p className="text-sm font-bold text-red-800 dark:text-red-300">{formatCLP(1110000)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Consumo de Combustible */}
-        <Card variant="modern" className="bg-gradient-to-br from-white via-orange-50/30 to-yellow-50/20 border-orange-200/50 dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader variant="gradient" className="bg-gradient-to-r from-orange-500 to-orange-600 dark:bg-orange-600">
-            <div className="flex items-center justify-between">
-              <CardTitle variant="gradient" className="flex items-center space-x-3">
-                <div className="p-2 bg-white/20 rounded-xl">
-                  <Fuel className="h-6 w-6" />
+          {/* Consumo de Combustible */}
+          <Card variant="modern" className="bg-gradient-to-br from-white via-orange-50/30 to-yellow-50/20 border-orange-200/50 dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader variant="gradient" className="bg-gradient-to-r from-orange-500 to-orange-600 dark:bg-orange-600">
+              <div className="flex items-center justify-between">
+                <CardTitle variant="gradient" className="flex items-center space-x-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Fuel className="h-6 w-6" />
+                  </div>
+                  <span>Consumo de Combustible</span>
+                </CardTitle>
+                <div className="flex items-center space-x-2 bg-white/20 rounded-xl px-3 py-1">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                  <span className="text-sm font-semibold text-white">+12.5%</span>
                 </div>
-                <span>Consumo de Combustible</span>
-              </CardTitle>
-              <div className="flex items-center space-x-2 bg-white/20 rounded-xl px-3 py-1">
-                <TrendingUp className="h-4 w-4 text-white" />
-                <span className="text-sm font-semibold text-white">+12.5%</span>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 chart-container">
-            <div className="h-80 chart-area">
-              <ResponsiveContainer
-                width="100%"
-                height="100%"
-              >
-                <LineChart
-                  data={fuelConsumptionData}
-                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+            </CardHeader>
+            <CardContent className="p-6 chart-container">
+              <div className="h-80 chart-area">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis
-                    dataKey="mes"
-                    stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
-                    fontSize={12}
-                    tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
-                  />
-                  <YAxis
-                    stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
-                    fontSize={12}
-                    tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
-                    tickFormatter={(value) => `${value}L`}
-                  />
-                  <Tooltip
-                    cursor={false}
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload || !payload.length) return null
-                      const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
-                      return (
-                        <div style={{
-                          backgroundColor: isDark ? '#1F2937' : 'white',
-                          border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          boxShadow: isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                          padding: '12px',
-                          color: isDark ? '#E7E9EA' : '#0F1419'
-                        }}>
-                          <p style={{
-                            margin: '0 0 8px 0',
-                            fontWeight: 'bold',
+                  <LineChart
+                    data={fuelConsumptionData}
+                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
+                    <XAxis
+                      dataKey="mes"
+                      stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
+                      fontSize={12}
+                      tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
+                    />
+                    <YAxis
+                      stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
+                      fontSize={12}
+                      tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
+                      tickFormatter={(value) => `${value}L`}
+                    />
+                    <Tooltip
+                      cursor={false}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || !payload.length) return null
+                        const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
+                        return (
+                          <div style={{
+                            backgroundColor: isDark ? '#1F2937' : 'white',
+                            border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            boxShadow: isDark ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            padding: '12px',
                             color: isDark ? '#E7E9EA' : '#0F1419'
                           }}>
-                            {label}
-                          </p>
-                          {payload.map((entry: any, index: number) => (
-                            <p key={index} style={{
-                              margin: '4px 0',
+                            <p style={{
+                              margin: '0 0 8px 0',
+                              fontWeight: 'bold',
                               color: isDark ? '#E7E9EA' : '#0F1419'
                             }}>
-                              <span style={{ color: entry.color }}>●</span> {entry.name === 'consumo' ? 'Consumo' : 'Costo'}: {entry.name === 'consumo' ? `${entry.value}L` : formatCLP(typeof entry.value === 'number' ? entry.value : Number(entry.value))}
+                              {label}
                             </p>
-                          ))}
-                        </div>
-                      )
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="consumo"
-                    stroke="#f59e0b"
-                    strokeWidth={3}
-                    dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
-                <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Promedio Mensual</p>
-                <p className="text-xl font-bold text-orange-800 dark:text-orange-300">1,275L</p>
+                            {payload.map((entry: any, index: number) => (
+                              <p key={index} style={{
+                                margin: '4px 0',
+                                color: isDark ? '#E7E9EA' : '#0F1419'
+                              }}>
+                                <span style={{ color: entry.color }}>●</span> {entry.name === 'consumo' ? 'Consumo' : 'Costo'}: {entry.name === 'consumo' ? `${entry.value}L` : formatCLP(typeof entry.value === 'number' ? entry.value : Number(entry.value))}
+                              </p>
+                            ))}
+                          </div>
+                        )
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="consumo"
+                      stroke="#f59e0b"
+                      strokeWidth={3}
+                      dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
-                <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Costo Total</p>
-                <p className="text-xl font-bold text-orange-800 dark:text-orange-300">{formatCLP(9562500)}</p>
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
+                  <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Promedio Mensual</p>
+                  <p className="text-xl font-bold text-orange-800 dark:text-orange-300">1,275L</p>
+                </div>
+                <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
+                  <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Costo Total</p>
+                  <p className="text-xl font-bold text-orange-800 dark:text-orange-300">{formatCLP(9562500)}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

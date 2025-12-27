@@ -54,7 +54,7 @@ import { useSearchParams } from 'next/navigation'
 
 export default function RepuestosPage() {
   const searchParams = useSearchParams()
-  const { spareParts, deleteSparePart, updateSparePart, machinery, partMovements, deletePartMovement, workOrders } = useApp()
+  const { spareParts, deleteSparePart, updateSparePart, machinery, partMovements, deletePartMovement, workOrders, currentUser } = useApp()
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -209,14 +209,16 @@ export default function RepuestosPage() {
           <p className="text-gray-600 dark:text-gray-300">Control de inventario y movimientos de repuestos</p>
         </div>
         <div className="flex space-x-2">
-          <button
-            type="button"
-            className="flex items-center space-x-2 h-10 px-4 text-sm font-semibold rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white transition-colors shadow-sm hover:shadow-md"
-            onClick={() => setShowNewSparePartModal(true)}
-          >
-            <Plus className="h-4 w-4" />
-            <span>Nuevo Repuesto</span>
-          </button>
+          {currentUser?.role === 'administrador' && (
+            <button
+              type="button"
+              className="flex items-center space-x-2 h-10 px-4 text-sm font-semibold rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white transition-colors shadow-sm hover:shadow-md"
+              onClick={() => setShowNewSparePartModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Nuevo Repuesto</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -369,24 +371,28 @@ export default function RepuestosPage() {
                       >
                         <Eye className="h-3 w-3" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(part)}
-                        title="Editar"
-                        className="h-7 w-7 p-0"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(part)}
-                        title="Eliminar"
-                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      {(currentUser?.role === 'administrador' || currentUser?.role === 'mecanico') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(part)}
+                          title="Editar"
+                          className="h-7 w-7 p-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {currentUser?.role === 'administrador' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(part)}
+                          title="Eliminar"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -776,14 +782,16 @@ export default function RepuestosPage() {
               >
                 Cerrar
               </button>
-              <button
-                type="button"
-                onClick={() => handleEdit(selectedSparePart)}
-                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-700 text-white transition-colors flex items-center justify-center gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Editar
-              </button>
+              {(currentUser?.role === 'administrador' || currentUser?.role === 'mecanico') && (
+                <button
+                  type="button"
+                  onClick={() => handleEdit(selectedSparePart)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-700 text-white transition-colors flex items-center justify-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -920,9 +928,24 @@ function MovementModal({
                 </SelectContent>
               </Select>
               {selectedPart && type === 'salida' && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Stock disponible: <span className="font-medium">{selectedPart.current_stock} unidades</span>
-                </p>
+                <div className="mt-2 flex flex-col gap-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Stock disponible: <span className="font-medium">{selectedPart.current_stock} unidades</span>
+                  </p>
+
+                  {/* Validation Warning for Low Stock */}
+                  {selectedPart.current_stock - quantity < selectedPart.minimum_stock && selectedPart.current_stock - quantity >= 0 && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-yellow-800">Advertencia de Stock Bajo</p>
+                        <p className="text-yellow-700">
+                          Esta salida dejará el stock ({selectedPart.current_stock - quantity}) por debajo del mínimo ({selectedPart.minimum_stock}).
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

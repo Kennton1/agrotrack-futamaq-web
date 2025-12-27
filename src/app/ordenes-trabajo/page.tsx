@@ -23,7 +23,7 @@ import { useSearchParams } from 'next/navigation'
 
 export default function OrdenesTrabajoPage() {
   const searchParams = useSearchParams()
-  const { workOrders, deleteWorkOrder, addWorkOrder, updateWorkOrder, machinery } = useApp()
+  const { workOrders, deleteWorkOrder, addWorkOrder, updateWorkOrder, machinery, currentUser } = useApp()
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all')
@@ -223,6 +223,9 @@ export default function OrdenesTrabajoPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <div className="bg-yellow-100 p-2 text-xs font-mono text-black border border-yellow-300 mb-4 rounded">
+        DEBUG INFO: currentUser is {currentUser ? JSON.stringify(currentUser) : 'NULL'} | Role: {currentUser?.role}
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -230,14 +233,16 @@ export default function OrdenesTrabajoPage() {
           <p className="text-gray-700 dark:text-gray-300">Gestiona y monitorea las órdenes de trabajo</p>
         </div>
         <div className="flex space-x-2">
-          <button
-            type="button"
-            onClick={() => setShowNewOrderModal(true)}
-            className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Nueva Orden</span>
-          </button>
+          {currentUser?.role === 'administrador' && (
+            <button
+              type="button"
+              onClick={() => setShowNewOrderModal(true)}
+              className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Nueva Orden</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -539,24 +544,28 @@ export default function OrdenesTrabajoPage() {
                       >
                         <Eye className="h-3 w-3" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(order)}
-                        title="Editar"
-                        className="h-7 w-7 p-0"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(order)}
-                        title="Eliminar"
-                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      {currentUser?.role === 'administrador' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(order)}
+                          title="Editar"
+                          className="h-7 w-7 p-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {currentUser?.role === 'administrador' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(order)}
+                          title="Eliminar"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -566,276 +575,288 @@ export default function OrdenesTrabajoPage() {
         </div>
 
         {/* Paginación */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center space-x-1 pt-4">
-            {currentPage > 1 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                className="h-8 px-3 rounded-md bg-slate-800 hover:bg-slate-700 text-white border-slate-600 font-medium mr-1"
-              >
-                Anterior
-              </Button>
-            )}
-            {Array.from({ length: Math.min(9, totalPages) }, (_, i) => {
-              let pageNum
-              if (totalPages <= 9) {
-                pageNum = i + 1
-              } else if (currentPage <= 5) {
-                pageNum = i + 1
-              } else if (currentPage >= totalPages - 4) {
-                pageNum = totalPages - 8 + i
-              } else {
-                pageNum = currentPage - 4 + i
-              }
-
-              return (
+        {
+          totalPages > 1 && (
+            <div className="flex items-center justify-center space-x-1 pt-4">
+              {currentPage > 1 && (
                 <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? "primary" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`h-8 w-8 p-0 rounded-md font-medium ${currentPage === pageNum
-                    ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
-                    : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'
-                    }`}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className="h-8 px-3 rounded-md bg-slate-800 hover:bg-slate-700 text-white border-slate-600 font-medium mr-1"
                 >
-                  {pageNum}
+                  Anterior
                 </Button>
-              )
-            })}
+              )}
+              {Array.from({ length: Math.min(9, totalPages) }, (_, i) => {
+                let pageNum
+                if (totalPages <= 9) {
+                  pageNum = i + 1
+                } else if (currentPage <= 5) {
+                  pageNum = i + 1
+                } else if (currentPage >= totalPages - 4) {
+                  pageNum = totalPages - 8 + i
+                } else {
+                  pageNum = currentPage - 4 + i
+                }
 
-            {currentPage < totalPages && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                className="h-8 px-3 rounded-md bg-slate-800 hover:bg-slate-700 text-white border-slate-600 font-medium ml-1"
-              >
-                Siguiente
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`h-8 w-8 p-0 rounded-md font-medium ${currentPage === pageNum
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
+                      : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'
+                      }`}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
 
-      {filteredOrders.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <ClipboardList className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron órdenes de trabajo</h3>
-            <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
-          </CardContent>
-        </Card>
-      )}
+              {currentPage < totalPages && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  className="h-8 px-3 rounded-md bg-slate-800 hover:bg-slate-700 text-white border-slate-600 font-medium ml-1"
+                >
+                  Siguiente
+                </Button>
+              )}
+            </div>
+          )
+        }
+      </div >
+
+      {
+        filteredOrders.length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <ClipboardList className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron órdenes de trabajo</h3>
+              <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* Modal de confirmación de eliminación */}
-      {showDeleteModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-red-100 rounded-full">
-                <Trash2 className="h-6 w-6 text-red-600" />
+      {
+        showDeleteModal && selectedOrder && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Eliminar Orden de Trabajo</h3>
+                  <p className="text-sm text-gray-500">Esta acción no se puede deshacer</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Eliminar Orden de Trabajo</h3>
-                <p className="text-sm text-gray-500">Esta acción no se puede deshacer</p>
+
+              <div className="mb-6">
+                <p className="text-gray-700">
+                  ¿Estás seguro de que quieres eliminar la orden{' '}
+                  <span className="font-semibold">{selectedOrder.id}</span>?
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Campo: {selectedOrder.field_name}
+                </p>
               </div>
-            </div>
 
-            <div className="mb-6">
-              <p className="text-gray-700">
-                ¿Estás seguro de que quieres eliminar la orden{' '}
-                <span className="font-semibold">{selectedOrder.id}</span>?
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                Campo: {selectedOrder.field_name}
-              </p>
-            </div>
-
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={confirmDelete}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-              >
-                Eliminar
-              </Button>
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Eliminar
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal de vista de detalles */}
-      {selectedOrder && !showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <ClipboardList className="h-8 w-8 text-blue-500 dark:text-blue-400" />
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedOrder.id}</h3>
-                  <p className="text-gray-500 dark:text-gray-400">{selectedOrder.field_name}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Información General</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Estado:</span>
-                      <Badge variant={getStatusColor(selectedOrder.status) as any}>
-                        {getStatusLabel(selectedOrder.status)}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Prioridad:</span>
-                      <Badge variant={getPriorityColor(selectedOrder.priority) as any}>
-                        {getPriorityLabel(selectedOrder.priority)}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Tipo de Tarea:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{selectedOrder.task_type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Operador:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{selectedOrder.assigned_operator}</span>
-                    </div>
+      {
+        selectedOrder && !showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <ClipboardList className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedOrder.id}</h3>
+                    <p className="text-gray-500 dark:text-gray-400">{selectedOrder.field_name}</p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Fechas</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Inicio Planificado:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.planned_start_date)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Fin Planificado:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.planned_end_date)}</span>
-                    </div>
-                    {selectedOrder.actual_start_date && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">Información General</h4>
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Inicio Real:</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.actual_start_date)}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Estado:</span>
+                        <Badge variant={getStatusColor(selectedOrder.status) as any}>
+                          {getStatusLabel(selectedOrder.status)}
+                        </Badge>
                       </div>
-                    )}
-                    {selectedOrder.actual_end_date && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Fin Real:</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.actual_end_date)}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Prioridad:</span>
+                        <Badge variant={getPriorityColor(selectedOrder.priority) as any}>
+                          {getPriorityLabel(selectedOrder.priority)}
+                        </Badge>
                       </div>
-                    )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Tipo de Tarea:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{selectedOrder.task_type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Operador:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{selectedOrder.assigned_operator}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">Fechas</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Inicio Planificado:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.planned_start_date)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Fin Planificado:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.planned_end_date)}</span>
+                      </div>
+                      {selectedOrder.actual_start_date && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">Inicio Real:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.actual_start_date)}</span>
+                        </div>
+                      )}
+                      {selectedOrder.actual_end_date && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">Fin Real:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedOrder.actual_end_date)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">Progreso</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Progreso:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{selectedOrder.progress_percentage}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                        <div
+                          className="bg-primary-500 dark:bg-primary-600 h-2 rounded-full"
+                          style={{ width: `${selectedOrder.progress_percentage}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between mt-3">
+                        <span className="text-gray-500 dark:text-gray-400">Hectáreas:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{formatHectares(selectedOrder.actual_hectares)} / {formatHectares(selectedOrder.target_hectares)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Horas:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{formatHours(selectedOrder.actual_hours)} / {formatHours(selectedOrder.target_hours)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">Descripción</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{selectedOrder.description}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Progreso</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Progreso:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{selectedOrder.progress_percentage}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
-                      <div
-                        className="bg-primary-500 dark:bg-primary-600 h-2 rounded-full"
-                        style={{ width: `${selectedOrder.progress_percentage}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between mt-3">
-                      <span className="text-gray-500 dark:text-gray-400">Hectáreas:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{formatHectares(selectedOrder.actual_hectares)} / {formatHectares(selectedOrder.target_hectares)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Horas:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{formatHours(selectedOrder.actual_hours)} / {formatHours(selectedOrder.target_hours)}</span>
+              {/* Reporte de Avance (View Mode) */}
+              <div className="space-y-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-2 pb-2">
+                  <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Reporte de Avance</h4>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300 font-medium">Notas del Operador</Label>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[80px]">
+                      {selectedOrder.worker_notes ? (
+                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm">{selectedOrder.worker_notes}</p>
+                      ) : (
+                        <p className="text-gray-400 italic text-sm">Sin notas del operador registradas.</p>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Descripción</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{selectedOrder.description}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Reporte de Avance (View Mode) */}
-            <div className="space-y-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center space-x-2 pb-2">
-                <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Reporte de Avance</h4>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-gray-700 dark:text-gray-300 font-medium">Notas del Operador</Label>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[80px]">
-                    {selectedOrder.worker_notes ? (
-                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm">{selectedOrder.worker_notes}</p>
-                    ) : (
-                      <p className="text-gray-400 italic text-sm">Sin notas del operador registradas.</p>
-                    )}
-                  </div>
-                </div>
+              <div className="flex justify-center mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="px-8 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cerrar
+                </button>
               </div>
-            </div>
-
-            <div className="flex justify-center mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="px-8 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cerrar
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal de Nueva Orden */}
-      {showNewOrderModal && (
-        <NewOrderModal
-          onClose={() => setShowNewOrderModal(false)}
-          addWorkOrder={addWorkOrder}
-          machinery={machinery}
-        />
-      )}
+      {
+        showNewOrderModal && (
+          <NewOrderModal
+            onClose={() => setShowNewOrderModal(false)}
+            addWorkOrder={addWorkOrder}
+            machinery={machinery}
+          />
+        )
+      }
 
       {/* Modal de Editar Orden */}
-      {showEditOrderModal && orderToEdit && (
-        <EditOrderModal
-          order={orderToEdit}
-          onClose={() => {
-            setShowEditOrderModal(false)
-            setOrderToEdit(null)
-          }}
-          updateWorkOrder={updateWorkOrder}
-          machinery={machinery}
-        />
-      )}
-    </div>
+      {
+        showEditOrderModal && orderToEdit && (
+          <EditOrderModal
+            order={orderToEdit}
+            onClose={() => {
+              setShowEditOrderModal(false)
+              setOrderToEdit(null)
+            }}
+            updateWorkOrder={updateWorkOrder}
+            machinery={machinery}
+          />
+        )
+      }
+    </div >
   )
 }

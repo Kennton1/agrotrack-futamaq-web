@@ -123,7 +123,7 @@ export interface User {
   id: string
   email: string
   full_name: string
-  role: 'administrador' | 'operador' | 'cliente'
+  role: 'administrador' | 'operador' | 'cliente' | 'mecanico' | 'trabajador'
   is_active: boolean
   created_at: string
   last_login: string
@@ -196,7 +196,7 @@ export interface Incident {
 
 export interface Notification {
   id: string
-  type: 'incident' | 'maintenance' | 'fuel' | 'stock' | 'system' | 'work_order' | 'machinery'
+  type: 'incident' | 'maintenance' | 'fuel' | 'stock' | 'system' | 'work_order' | 'machinery' | 'info'
   title: string
   message: string
   timestamp: string
@@ -216,6 +216,7 @@ interface AppContextType {
   incidents: Incident[]
   notifications: Notification[]
   users: User[]
+  currentUser: User | null
   clients: Client[]
 
   // Funciones de maquinarias
@@ -363,6 +364,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ])
   )
 
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+
   // Ref para mantener el estado actual de órdenes y comparar en Realtime
   const workOrdersRef = useRef(workOrders)
   useEffect(() => {
@@ -411,8 +414,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
 
         const session = sessionDataRes?.session
+        console.log('DEBUG: Session found:', session?.user?.email, session?.user?.id)
+
         if (session?.user) {
-          const publicUser = usersData.find((u: any) => u.email === session.user.email)
+          console.log('DEBUG: searching in usersData:', usersData.length, 'users found')
+          const publicUser = usersData.find((u: any) => u.id === session.user.id || u.email === session.user.email)
+
+          console.log('DEBUG: publicUser found?', publicUser)
+
+          if (publicUser) {
+            setCurrentUser(publicUser as User)
+          }
+
           if (!publicUser) {
             console.log('🔄 Sincronizando usuario de Auth a tabla pública...')
             const newUserPublicData = {
@@ -426,7 +439,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               last_login: new Date().toISOString()
             }
             const { error: insertError } = await supabase.from('users').insert([newUserPublicData])
-            if (!insertError) setUsers(prev => [...prev, newUserPublicData as any])
+            if (!insertError) {
+              const newUser = newUserPublicData as any
+              setUsers(prev => [...prev, newUser])
+              setCurrentUser(newUser)
+            }
           } else if (publicUser && (publicUser.avatar_url !== session.user.user_metadata?.avatar_url || publicUser.full_name !== session.user.user_metadata?.full_name)) {
             console.log('🔄 Actualizando datos de usuario en tabla pública...')
             const updatedData = {
@@ -436,6 +453,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
             await supabase.from('users').update(updatedData).eq('id', publicUser.id)
             setUsers(prev => prev.map(u => u.id === publicUser.id ? { ...u, ...updatedData } : u))
+            setCurrentUser({ ...publicUser, ...updatedData } as User)
           }
         }
       }
@@ -568,6 +586,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('Realtime subscribing to fuel_loads...')
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Suscripción a mantenimientos
+  useEffect(() => {
+    if (!supabase) return
+
+    const channel = supabase
+      .channel('maintenance-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'maintenances'
+        },
+        async (payload) => {
+          const newMaintenance = payload.new as Maintenance
+
+          const newNotification: Notification = {
+            id: Date.now().toString(),
+            type: 'maintenance',
+            title: 'Nuevo Mantenimiento Programado',
+            message: `${newMaintenance.type.toUpperCase()} - ${newMaintenance.machinery_code}`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            link: '/mantenimientos'
+          }
+
+          setNotifications(prev => [newNotification, ...prev])
+          setMaintenances(prev => [newMaintenance, ...prev])
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Realtime subscribing to maintenances...')
         }
       })
 
@@ -1024,7 +1083,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Éxito en Supabase
-        setMaintenances(prev => [...prev, data as Maintenance])
+        if (data) {
+          setMaintenances(prev => [...prev, data as Maintenance])
+
+          // Actualizar estado de maquinaria si la mantención está en ejecución
+          if (data.status === 'en_ejecucion') {
+            await updateMachinery(data.machinery_id, { status: 'en_mantencion' })
+          }
+        }
+
         toast.success('Mantenimiento programado exitosamente')
       } else {
         // Fallback si no hay cliente Supabase
@@ -1591,6 +1658,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     incidents,
     notifications,
     users,
+    currentUser,
     clients,
     addMachinery,
     updateMachinery,
@@ -1620,7 +1688,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     deleteClient
   }), [
     machinery, workOrders, maintenances, fuelLoads, spareParts, partMovements,
-    incidents, notifications, users, clients,
+    incidents, notifications, users, currentUser, clients,
     addMachinery, updateMachinery, deleteMachinery, getMachinery,
     addWorkOrder, updateWorkOrder, deleteWorkOrder, getWorkOrder,
     addMaintenance, updateMaintenance, deleteMaintenance, getMaintenance,

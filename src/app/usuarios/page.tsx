@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { 
-  Plus, Search, Edit, Trash2, Eye, 
-  Users, User, Mail, Phone, Calendar, Shield, X 
+import {
+  Plus, Search, Edit, Trash2, Eye,
+  Users, User, Mail, Phone, Calendar, Shield, X, Settings
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
@@ -18,11 +18,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/u
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useRouter } from 'next/navigation'
 
 const userSchema = z.object({
   full_name: z.string().min(1, 'El nombre completo es requerido'),
   email: z.string().email('El email debe ser válido'),
-  role: z.enum(['administrador', 'operador', 'cliente'], {
+  role: z.enum(['administrador', 'operador', 'cliente', 'mecanico', 'trabajador'], {
     message: 'El rol es requerido',
   }),
   phone: z.string().optional(),
@@ -32,7 +33,8 @@ const userSchema = z.object({
 type UserFormData = z.infer<typeof userSchema>
 
 export default function UsuariosPage() {
-  const { users, deleteUser } = useApp()
+  const { users, deleteUser, currentUser } = useApp()
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
@@ -45,6 +47,13 @@ export default function UsuariosPage() {
   useEffect(() => {
     setLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (!loading && currentUser && currentUser.role !== 'administrador') {
+      router.push('/dashboard')
+      toast.error('No tienes permisos para acceder a esta sección')
+    }
+  }, [currentUser, loading, router])
 
   // Funciones para manejar acciones
   const handleView = (user: any) => {
@@ -74,13 +83,13 @@ export default function UsuariosPage() {
   const usersList = users || []
   const filteredUsers = usersList.filter(user => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (user.phone && user.phone.includes(searchTerm))
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.phone && user.phone.includes(searchTerm))
     const matchesRole = roleFilter === 'all' || user.role === roleFilter
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && user.is_active) ||
-                         (statusFilter === 'inactive' && !user.is_active)
-    
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'active' && user.is_active) ||
+      (statusFilter === 'inactive' && !user.is_active)
+
     return matchesSearch && matchesRole && matchesStatus
   })
 
@@ -92,6 +101,9 @@ export default function UsuariosPage() {
         return <User className="h-5 w-5 text-blue-500" />
       case 'cliente':
         return <Users className="h-5 w-5 text-green-500" />
+      case 'mecanico':
+      case 'trabajador':
+        return <Settings className="h-5 w-5 text-orange-500" />
       default:
         return <User className="h-5 w-5 text-gray-500" />
     }
@@ -105,6 +117,9 @@ export default function UsuariosPage() {
         return 'info' as const
       case 'cliente':
         return 'success' as const
+      case 'mecanico':
+      case 'trabajador':
+        return 'warning' as const
       default:
         return 'default' as const
     }
@@ -118,6 +133,10 @@ export default function UsuariosPage() {
         return 'Operador'
       case 'cliente':
         return 'Cliente'
+      case 'mecanico':
+        return 'Mecánico'
+      case 'trabajador':
+        return 'Trabajador'
       default:
         return role
     }
@@ -177,7 +196,7 @@ export default function UsuariosPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -191,7 +210,7 @@ export default function UsuariosPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -205,7 +224,7 @@ export default function UsuariosPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -235,7 +254,7 @@ export default function UsuariosPage() {
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full"
               />
             </div>
-            
+
             <div>
               <select
                 value={roleFilter}
@@ -246,9 +265,11 @@ export default function UsuariosPage() {
                 <option value="administrador">Administrador</option>
                 <option value="operador">Operador</option>
                 <option value="cliente">Cliente</option>
+                <option value="mecanico">Mecánico</option>
+                <option value="trabajador">Trabajador</option>
               </select>
             </div>
-            
+
             <div>
               <select
                 value={statusFilter}
@@ -286,7 +307,7 @@ export default function UsuariosPage() {
                 </Badge>
               </div>
             </CardHeader>
-            
+
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-2">
                 {getRoleIcon(user.role)}
@@ -315,28 +336,28 @@ export default function UsuariosPage() {
 
               <div className="flex justify-between pt-2 border-t">
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleView(user)} 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleView(user)}
                     title="Ver detalles"
                     className="!transform-none !scale-100 !transition-none dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleEdit(user)} 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(user)}
                     title="Editar usuario"
                     className="!transform-none !scale-100 !transition-none dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleDelete(user)} 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(user)}
                     title="Eliminar usuario"
                     className="!transform-none !scale-100 !transition-none dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                   >
@@ -407,9 +428,9 @@ export default function UsuariosPage() {
 
       {/* Modal Editar Usuario */}
       {showEditModal && selectedUser && (
-        <EditUserModal 
-          user={selectedUser} 
-          onClose={() => setShowEditModal(false)} 
+        <EditUserModal
+          user={selectedUser}
+          onClose={() => setShowEditModal(false)}
           onSave={() => {
             setShowEditModal(false)
             setSelectedUser(null)
@@ -484,7 +505,7 @@ function EditUserModal({ user, onClose, onSave }: { user: any, onClose: () => vo
             <X className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Nombre Completo */}
@@ -520,9 +541,11 @@ function EditUserModal({ user, onClose, onSave }: { user: any, onClose: () => vo
                   const roleLabels: { [key: string]: string } = {
                     'administrador': 'Administrador',
                     'operador': 'Operador',
-                    'cliente': 'Cliente'
+                    'cliente': 'Cliente',
+                    'mecanico': 'Mecánico',
+                    'trabajador': 'Trabajador'
                   }
-                  
+
                   return (
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
@@ -534,6 +557,8 @@ function EditUserModal({ user, onClose, onSave }: { user: any, onClose: () => vo
                         <SelectItem value="administrador">Administrador</SelectItem>
                         <SelectItem value="operador">Operador</SelectItem>
                         <SelectItem value="cliente">Cliente</SelectItem>
+                        <SelectItem value="mecanico">Mecánico</SelectItem>
+                        <SelectItem value="trabajador">Trabajador</SelectItem>
                       </SelectContent>
                     </Select>
                   )

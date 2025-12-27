@@ -13,6 +13,7 @@ import Footer from '@/components/layout/Footer'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 import { Logo } from './Logo'
+import { BRANDING } from '@/lib/branding'
 
 const navigationGroups = [
   {
@@ -72,45 +73,125 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
   const [notifications, setNotifications] = useState<any[]>([])
   const pathname = usePathname()
   const authContext = useAuth()
-  const { notifications: contextNotifications, markNotificationAsRead } = useApp()
+  const { user, loading, signOut } = authContext || {}
+  const { notifications: contextNotifications, markNotificationAsRead, currentUser } = useApp()
   const profileDropdownRef = useRef<HTMLDivElement>(null)
   const notificationsDropdownRef = useRef<HTMLDivElement>(null)
 
+  // Filter Navigation based on Role
+  const filteredNavigation = navigationGroups.map(group => {
+    // 1. Admin: Ve todo
+    if (!currentUser || currentUser.role === 'administrador') return group
+
+    // 2. Mecánico: Flota (Maquinarias, Mantenimientos, Combustible), Inventario, Incidencias, Configuración
+    if (currentUser.role === 'mecanico') {
+      if (group.title === 'OPERACIÓN') {
+        return {
+          ...group,
+          items: group.items.filter(item => item.name === 'Incidencias')
+        }
+      }
+      if (group.title === 'FLOTA') {
+        // Puede ver todo en FLOTA
+        return group
+      }
+      if (group.title === 'INVENTARIO') {
+        // Puede ver todo en INVENTARIO
+        return group
+      }
+      if (group.title === 'ADMINISTRACIÓN') {
+        return {
+          ...group,
+          items: group.items
+            .filter(item => item.name === 'Configuración' || item.name === 'Notificaciones')
+            .map(item => item.name === 'Configuración' ? { ...item, href: '/perfil' } : item)
+        }
+      }
+      // ANALISIS oculto
+      return null
+    }
+
+    // 3. Operador (Trabajador): Acceso mínimo si entra a la web (normalmente usa App)
+    if (currentUser.role === 'operador' || currentUser.role === 'trabajador') {
+      if (group.title === 'FLOTA') {
+        return {
+          ...group,
+          items: group.items.filter(item => item.name === 'Maquinarias')
+        }
+      }
+      // Opcional: Permitir Incidencias si lo necesitan
+      if (group.title === 'OPERACIÓN') {
+        return {
+          ...group,
+          items: group.items.filter(item => item.name === 'Incidencias')
+        }
+      }
+      // Configuración para perfil
+      if (group.title === 'ADMINISTRACIÓN') {
+        return {
+          ...group,
+          items: group.items
+            .filter(item => item.name === 'Configuración' || item.name === 'Notificaciones')
+            .map(item => item.name === 'Configuración' ? { ...item, href: '/perfil' } : item)
+        }
+      }
+      return null
+    }
+
+    return null
+  }).filter(Boolean)
+
   // Sync notifications from AppContext
   useEffect(() => {
-    const mappedNotifications = contextNotifications.map(n => {
-      // Determine type and priority based on notification type
-      let type = 'info'
-      let priority = 'medium'
+    const mappedNotifications = contextNotifications
+      .filter(n => {
+        // Filtro de Notificaciones por Rol
+        if (!currentUser) return false
+        if (currentUser.role === 'administrador') return true
 
-      if (n.type === 'fuel') {
-        type = 'error'
-        priority = 'critical'
-      } else if (n.type === 'maintenance') {
-        type = 'warning'
-        priority = 'high'
-      } else if (n.type === 'incident') {
-        // Incidents can be critical, but let's default to info/warning styling
-        // or map based on content if possible. For now, use 'warning' for visibility.
-        type = 'warning'
-        priority = 'high'
-      }
+        // Mecánico ve Mantenimientos, Incidencias y lo que el admin le mande (general)
+        if (currentUser.role === 'mecanico') {
+          return n.type === 'maintenance' || n.type === 'incident' || n.type === 'info'
+        }
 
-      return {
-        id: n.id,
-        title: n.title,
-        message: n.message,
-        isRead: n.read || false,
-        createdAt: n.timestamp,
-        type,
-        category: n.type,
-        priority,
-        actionUrl: n.link,
-        actionRequired: true
-      }
-    })
+        // Operador
+        if (currentUser.role === 'operador' || currentUser.role === 'trabajador') {
+          return n.type === 'incident' || n.type === 'info'
+        }
+
+        return false
+      })
+      .map(n => {
+        // Determine type and priority based on notification type
+        let type = 'info'
+        let priority = 'medium'
+
+        if (n.type === 'fuel') {
+          type = 'error'
+          priority = 'critical'
+        } else if (n.type === 'maintenance') {
+          type = 'warning'
+          priority = 'high'
+        } else if (n.type === 'incident') {
+          type = 'warning'
+          priority = 'high'
+        }
+
+        return {
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          isRead: n.read || false,
+          createdAt: n.timestamp,
+          type,
+          category: n.type,
+          priority,
+          actionUrl: n.link,
+          actionRequired: true
+        }
+      })
     setNotifications(mappedNotifications)
-  }, [contextNotifications])
+  }, [contextNotifications, currentUser])
 
   // Load theme from localStorage or default to dark
   useEffect(() => {
@@ -168,12 +249,9 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
   }, [])
 
   // Sync theme changes to localStorage and html attribute
-  // Este efecto asegura que cualquier cambio manual del tema se persista
   useEffect(() => {
     if (typeof window === 'undefined' || !isInitialized) return
-    // Aplicar el tema al DOM
     document.documentElement.setAttribute('data-theme', theme)
-    // Guardar en localStorage para persistencia entre navegaciones
     localStorage.setItem('theme', theme)
   }, [theme, isInitialized])
 
@@ -219,8 +297,6 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
     }
   }, [])
 
-  const { user, loading, signOut } = authContext || {}
-
   // Redirigir al login si no está autenticado (solo en cliente y después de verificar)
   useEffect(() => {
     // Solo ejecutar en el cliente y después de que la carga haya terminado
@@ -231,16 +307,25 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
 
     // Si no hay usuario y no estamos en una página de autenticación, redirigir
     if (!user) {
-      const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/'
+      const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/' || pathname === '/success'
       if (!isAuthPage) {
         // Usar router.push en lugar de window.location para evitar recargas
         window.location.href = '/login'
+      }
+    } else {
+      // Si hay usuario, verificar si tiene acceso (simulado por ahora)
+      // Si el usuario acaba de registrarse (podríamos usar una cookie o localStorage temporal si no tenemos columna en DB)
+      // O simplemente confiar en que el redireccionamiento inicial es suficiente
+      // El usuario pidió "no podrá ingresar".
+      // Vamos a asumir que si el rol es 'cliente_pendiente' (nuevo rol sugerido) no entra
+      if (user.role === 'cliente_pendiente' as any && pathname.startsWith('/dashboard')) {
+        window.location.href = '/#planes'
       }
     }
   }, [loading, user, pathname])
 
   // No mostrar el layout en páginas de autenticación
-  if (pathname === '/login' || pathname === '/register' || pathname === '/') {
+  if (pathname === '/login' || pathname === '/register' || pathname === '/' || pathname === '/success') {
     return <>{children}</>
   }
 
@@ -257,7 +342,7 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
   }
 
   // Determinar si estamos en una página de autenticación
-  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/'
+  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/' || pathname === '/success'
 
   // Si hay usuario, mostrar el layout sin importar el estado de loading
   // Esto evita bloqueos cuando el usuario ya está autenticado
@@ -290,6 +375,7 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
   // Si llegamos aquí, hay usuario O estamos en página de auth, mostrar el layout normal
   return (
     <div className="app w-screen overflow-hidden relative">
+      {/* Header fijo mejorado */}
       {/* Header fijo mejorado */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 shadow-2xl border-b border-slate-200/50 backdrop-blur-lg">
         <div className="w-full max-w-[1920px] mx-auto">
@@ -531,7 +617,7 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user?.full_name || 'Mi Perfil'}</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{user?.email || 'admin@futamaq.cl'}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{user?.email || `admin@${BRANDING.appName.toLowerCase()}.cl`}</p>
                         </div>
                       </div>
                     </div>
@@ -604,7 +690,7 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
               <X className="h-6 w-6 text-white" />
             </button>
           </div>
-          <SidebarContent navigationGroups={navigationGroups} pathname={pathname} />
+          <SidebarContent navigationGroups={filteredNavigation} pathname={pathname} />
         </div>
       </div>
 
@@ -623,7 +709,7 @@ export default function NewAppLayout({ children }: NewAppLayoutProps) {
                 <X className="h-5 w-5 text-gray-600" />
               </button>
             </div>
-            <SidebarContent navigationGroups={navigationGroups} pathname={pathname} />
+            <SidebarContent navigationGroups={filteredNavigation} pathname={pathname} />
           </div>
         </div>
 

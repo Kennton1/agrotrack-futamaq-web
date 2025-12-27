@@ -34,7 +34,7 @@ type WorkOrderFormData = z.infer<typeof workOrderSchema>
 
 export default function NuevaOrdenTrabajoPage() {
   const router = useRouter()
-  const { addWorkOrder, machinery, clients, fetchData } = useApp()
+  const { addWorkOrder, machinery, clients, fetchData, workOrders } = useApp()
   const [selectedMachinery, setSelectedMachinery] = useState<number[]>([])
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
 
@@ -61,7 +61,46 @@ export default function NuevaOrdenTrabajoPage() {
     },
   })
 
+  // Watch dates to update availability in real-time
+  const startDate = watch('planned_start_date')
+  const endDate = watch('planned_end_date')
+
+  const getMachineryAvailability = (machineryId: number) => {
+    if (!startDate || !endDate) return { available: true }
+
+    const conflictingOrder = workOrders.find(order => {
+      // Ignore cancelled or completed orders
+      if (order.status === 'cancelada' || order.status === 'completada') return false
+
+      // Check if machinery is assigned to this order
+      if (!order.assigned_machinery.includes(machineryId)) return false
+
+      // Check date overlap
+      // Range A: [startDate, endDate]
+      // Range B: [order.planned_start_date, order.planned_end_date]
+      // Overlap if: StartA <= EndB AND EndA >= StartB
+      return startDate <= order.planned_end_date && endDate >= order.planned_start_date
+    })
+
+    if (conflictingOrder) {
+      return {
+        available: false,
+        reason: `Ocupada en OT: ${(conflictingOrder.client_name || conflictingOrder.id)} (${conflictingOrder.planned_start_date} - ${conflictingOrder.planned_end_date})`
+      }
+    }
+
+    return { available: true }
+  }
+
   const onSubmit = async (data: WorkOrderFormData) => {
+    // Re-validate availability before submitting
+    const unavailableMachinery = data.assigned_machinery.filter(id => !getMachineryAvailability(id).available)
+
+    if (unavailableMachinery.length > 0) {
+      toast.error('Una o más maquinarias seleccionadas ya no están disponibles para las fechas indicadas.')
+      return
+    }
+
     const newWorkOrder = {
       client_id: data.client_id,
       field_name: data.field_name,
@@ -372,17 +411,43 @@ export default function NuevaOrdenTrabajoPage() {
                       <span>Maquinarias Asignadas *</span>
                     </Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {machinery.map((mach) => (
-                        <label key={mach.id} className="flex items-center space-x-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-500 cursor-pointer transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={selectedMachinery.includes(mach.id)}
-                            onChange={(e) => handleMachineryChange(mach.id, e.target.checked)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700">{mach.brand} {mach.model}</span>
-                        </label>
-                      ))}
+                      {machinery.map((mach) => {
+                        const availability = getMachineryAvailability(mach.id)
+                        return (
+                          <label
+                            key={mach.id}
+                            className={`
+                              flex items-start space-x-2 p-3 border rounded-lg transition-colors
+                              ${availability.available
+                                ? 'border-gray-300 hover:bg-gray-50 hover:border-blue-500 cursor-pointer'
+                                : 'border-red-200 bg-red-50 opacity-75 cursor-not-allowed'
+                              }
+                            `}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedMachinery.includes(mach.id)}
+                              onChange={(e) => {
+                                if (availability.available) {
+                                  handleMachineryChange(mach.id, e.target.checked)
+                                }
+                              }}
+                              disabled={!availability.available}
+                              className={`mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${!availability.available ? 'opacity-50' : ''}`}
+                            />
+                            <div className="flex flex-col">
+                              <span className={`text-sm ${availability.available ? 'text-gray-700' : 'text-red-700 font-medium'}`}>
+                                {mach.brand} {mach.model}
+                              </span>
+                              {!availability.available && (
+                                <span className="text-xs text-red-500 mt-1">
+                                  {availability.reason}
+                                </span>
+                              )}
+                            </div>
+                          </label>
+                        )
+                      })}
                     </div>
                     {errors.assigned_machinery && <p className="text-red-500 text-sm mt-1">{errors.assigned_machinery.message}</p>}
                   </div>

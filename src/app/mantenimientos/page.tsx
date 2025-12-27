@@ -27,7 +27,7 @@ import {
 } from 'recharts'
 
 export default function MantenimientosPage() {
-  const { maintenances, deleteMaintenance, updateMaintenance, machinery, addMaintenance } = useApp()
+  const { maintenances, deleteMaintenance, updateMaintenance, machinery, addMaintenance, currentUser } = useApp()
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
@@ -977,24 +977,28 @@ export default function MantenimientosPage() {
                         >
                           <Eye className="h-3 w-3" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(maint)}
-                          title="Editar"
-                          className="h-7 w-7 p-0"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(maint)}
-                          title="Eliminar"
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        {currentUser?.role === 'administrador' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(maint)}
+                            title="Editar"
+                            className="h-7 w-7 p-0"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {currentUser?.role === 'administrador' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(maint)}
+                            title="Eliminar"
+                            className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

@@ -13,7 +13,7 @@ import { formatDate } from '@/lib/utils'
 import { useApp, Incident } from '@/contexts/AppContext'
 
 export default function IncidenciasPage() {
-  const { incidents, workOrders, machinery, users, deleteIncident, fetchData } = useApp()
+  const { incidents, workOrders, machinery, users, deleteIncident, fetchData, currentUser } = useApp()
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -346,15 +346,17 @@ export default function IncidenciasPage() {
                         <Eye className="h-3 w-3" />
                       </Button>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(incident)}
-                        title="Eliminar"
-                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      {currentUser?.role === 'administrador' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(incident)}
+                          title="Eliminar"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -541,9 +543,9 @@ export default function IncidenciasPage() {
                     <div className="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-800/50">
                       <span className="text-sm text-gray-500 dark:text-gray-400">Gravedad</span>
                       <span className={`text-sm font-bold uppercase ${selectedIncident.severity === 'critica' ? 'text-red-600' :
-                          selectedIncident.severity === 'alta' ? 'text-orange-500' :
-                            selectedIncident.severity === 'media' ? 'text-yellow-600' :
-                              'text-blue-500'
+                        selectedIncident.severity === 'alta' ? 'text-orange-500' :
+                          selectedIncident.severity === 'media' ? 'text-yellow-600' :
+                            'text-blue-500'
                         }`}>
                         {selectedIncident.severity === 'critica' ? 'CRÍTICA' :
                           selectedIncident.severity === 'alta' ? 'ALTA' :

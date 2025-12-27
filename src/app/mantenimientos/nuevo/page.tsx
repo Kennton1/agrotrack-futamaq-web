@@ -48,7 +48,7 @@ interface MaintenanceItemForm {
 
 export default function NuevoMantenimientoPage() {
   const router = useRouter()
-  const { addMaintenance, machinery } = useApp()
+  const { addMaintenance, machinery, workOrders } = useApp()
   const [items, setItems] = useState<MaintenanceItemForm[]>([])
   const [showItemModal, setShowItemModal] = useState(false)
   const [editingItem, setEditingItem] = useState<MaintenanceItemForm | null>(null)
@@ -92,6 +92,35 @@ export default function NuevoMantenimientoPage() {
   const selectedMachineryId = watch('machinery_id')
   const selectedMachinery = machinery.find(m => m.id === selectedMachineryId)
   const totalCost = items.reduce((sum, item) => sum + item.cost, 0)
+  const scheduledDate = watch('scheduled_date')
+
+  // Validate Machinery Availability
+  const getMachineryConflict = (machId: number, date: string) => {
+    if (!machId || !date) return null
+
+    // Find active WO that includes this machine and covers the date
+    const conflict = workOrders.find(wo => {
+      if (wo.status === 'completada' || wo.status === 'cancelada') return false
+
+      const start = new Date(wo.planned_start_date)
+      const end = new Date(wo.planned_end_date)
+      const checkDate = new Date(date)
+
+      // Reset hours for date comparison
+      start.setHours(0, 0, 0, 0)
+      end.setHours(0, 0, 0, 0)
+      checkDate.setHours(0, 0, 0, 0)
+
+      const isDateInUse = checkDate >= start && checkDate <= end
+      const hasMachine = wo.assigned_machinery.includes(machId)
+
+      return isDateInUse && hasMachine
+    })
+
+    return conflict
+  }
+
+  const machineryConflict = getMachineryConflict(selectedMachineryId, scheduledDate)
 
   const handleAddItem = (item: MaintenanceItemForm) => {
     if (editingItem) {
@@ -121,6 +150,13 @@ export default function NuevoMantenimientoPage() {
     const selectedMachinery = machinery.find(m => m.id === data.machinery_id)
     if (!selectedMachinery) {
       toast.error('Maquinaria no encontrada')
+      return
+    }
+
+    // Check conflict again on submit
+    const conflict = getMachineryConflict(data.machinery_id, data.scheduled_date)
+    if (conflict && data.type === 'preventiva') {
+      toast.error(`No se puede programar mantenimiento preventivo: Maquinaria ocupada en OT #${conflict.id}`)
       return
     }
 
@@ -198,6 +234,24 @@ export default function NuevoMantenimientoPage() {
                   <Wrench className="h-5 w-5 text-blue-600" />
                   <h2 className="text-xl font-semibold text-gray-900">Información Principal</h2>
                 </div>
+
+                {/* Global Alert for Conflict */}
+                {machineryConflict && (
+                  <div className={`p-4 rounded-lg flex items-start space-x-3 ${watch('type') === 'preventiva' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+                    <AlertCircle className={`h-5 w-5 mt-0.5 ${watch('type') === 'preventiva' ? 'text-red-600' : 'text-yellow-600'}`} />
+                    <div>
+                      <h4 className={`text-sm font-semibold ${watch('type') === 'preventiva' ? 'text-red-900' : 'text-yellow-900'}`}>
+                        {watch('type') === 'preventiva' ? 'Conflicto de Programación' : 'Advertencia de Uso'}
+                      </h4>
+                      <p className={`text-sm mt-1 ${watch('type') === 'preventiva' ? 'text-red-700' : 'text-yellow-700'}`}>
+                        La maquinaria seleccionada está asignada a la <strong>OT #{machineryConflict.id}</strong> (Cliente {machineryConflict.client_id}) en la fecha seleccionada.
+                        {watch('type') === 'preventiva'
+                          ? ' No se puede programar mantenimiento preventivo durante una OT activa.'
+                          : ' Se permite mantenimiento correctivo, pero considere el impacto en la operación.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Maquinaria */}
                   <div className="space-y-2">

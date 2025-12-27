@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ReportCard } from '@/components/reportes/ReportCard'
 import { VisualAnalysis } from '@/components/reportes/VisualAnalysis'
@@ -33,7 +34,8 @@ interface FilterOptions {
 }
 
 export default function ReportesPage() {
-  const { machinery, workOrders, maintenances, fuelLoads, spareParts, partMovements, clients } = useApp()
+  const { machinery, workOrders, maintenances, fuelLoads, spareParts, partMovements, clients, currentUser } = useApp()
+  const router = useRouter()
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
   const [activeFilters, setActiveFilters] = useState<FilterOptions>({
@@ -49,6 +51,13 @@ export default function ReportesPage() {
     groupBy: 'date',
     includeCharts: true
   })
+
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'administrador') {
+      router.push('/dashboard')
+      toast.error('No tienes permisos para acceder a esta sección')
+    }
+  }, [currentUser, router])
 
   // Debug: Ver qué datos tenemos
   useEffect(() => {

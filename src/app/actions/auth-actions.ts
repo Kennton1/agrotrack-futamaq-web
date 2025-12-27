@@ -23,7 +23,7 @@ export async function createNewUser(formData: any) {
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
             password,
-            email_confirm: true, // Confirmar email automáticamente
+            email_confirm: false, // El usuario debe confirmar su correo
             user_metadata: {
                 full_name,
                 role
@@ -32,6 +32,16 @@ export async function createNewUser(formData: any) {
 
         if (authError) throw authError
         if (!authUser.user) throw new Error('No se pudo crear el usuario')
+
+        // Enviar correo de verificación manualmente para asegurar entrega
+        // admin.createUser a veces no dispara el correo automáticamente dependiendo de la config
+        await supabaseAdmin.auth.resend({
+            type: 'signup',
+            email: email,
+            options: {
+                emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`
+            }
+        })
 
         // 2. Insertar en tabla public.users
         // Nota: Normalmente esto lo haría un Trigger, pero para asegurar consistencia lo hacemos aquí

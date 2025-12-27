@@ -19,7 +19,7 @@ const userSchema = z.object({
   full_name: z.string().min(1, 'El nombre completo es requerido'),
   email: z.string().email('El email debe ser válido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  role: z.enum(['administrador', 'operador', 'cliente'], {
+  role: z.enum(['administrador', 'operador', 'cliente', 'mecanico', 'trabajador'], {
     message: 'El rol es requerido',
   }),
   phone: z.string().optional(),
@@ -147,7 +147,9 @@ export default function NuevoUsuarioPage() {
                     const roleLabels: { [key: string]: string } = {
                       'administrador': 'Administrador',
                       'operador': 'Operador',
-                      'cliente': 'Cliente'
+                      'cliente': 'Cliente',
+                      'mecanico': 'Mecánico',
+                      'trabajador': 'Trabajador'
                     }
 
                     return (
@@ -161,6 +163,8 @@ export default function NuevoUsuarioPage() {
                           <SelectItem value="administrador">Administrador</SelectItem>
                           <SelectItem value="operador">Operador</SelectItem>
                           <SelectItem value="cliente">Cliente</SelectItem>
+                          <SelectItem value="mecanico">Mecánico</SelectItem>
+                          <SelectItem value="trabajador">Trabajador</SelectItem>
                         </SelectContent>
                       </Select>
                     )

@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useApp } from '@/contexts/AppContext'
 import { Settings, Save, ArrowLeft, Bell, Shield, Palette, Globe, Database } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -11,7 +13,16 @@ import { Label } from '@/components/ui/Label'
 import { toast } from 'react-hot-toast'
 
 export default function ConfiguracionPage() {
+  const { currentUser } = useApp()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'administrador') {
+      router.push('/dashboard')
+      toast.error('No tienes permisos para acceder a esta sección')
+    }
+  }, [currentUser, router])
   const [config, setConfig] = useState({
     // Configuración general
     companyName: 'FUTAMAQ',
@@ -20,24 +31,24 @@ export default function ConfiguracionPage() {
     timezone: 'America/Santiago',
     language: 'es',
     currency: 'CLP',
-    
+
     // Configuración de notificaciones
     emailNotifications: true,
     pushNotifications: true,
     maintenanceAlerts: true,
     fuelAlerts: true,
     workOrderAlerts: true,
-    
+
     // Configuración de interfaz
     theme: 'light',
     sidebarCollapsed: false,
     dashboardLayout: 'grid',
-    
+
     // Configuración de seguridad
     sessionTimeout: '30',
     twoFactorAuth: false,
     passwordExpiry: '90',
-    
+
     // Configuración de datos
     autoBackup: true,
     backupFrequency: 'daily',

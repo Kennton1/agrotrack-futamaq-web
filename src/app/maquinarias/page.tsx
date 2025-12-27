@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { formatCLP, formatHours } from '@/lib/utils'
 import { useApp } from '@/contexts/AppContext'
+import { AuditLogViewer } from '@/components/audit/AuditLogViewer'
 import MachineryMap from '@/components/maps/MachineryMap'
 import { ImageCarousel } from '@/components/maquinarias/ImageCarousel'
 import { Machinery } from '@/contexts/AppContext'
@@ -25,11 +26,12 @@ import { ImageUpload } from '@/components/maquinarias/ImageUpload'
 import { CreditCard, Calendar, Activity, DollarSign } from 'lucide-react'
 
 export default function MaquinariasPage() {
-  const { machinery, deleteMachinery, addMachinery, updateMachinery } = useApp()
+  const { machinery, deleteMachinery, addMachinery, updateMachinery, workOrders, currentUser } = useApp()
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'available' | 'in_use' | 'maintenance'>('all')
   const [selectedMachinery, setSelectedMachinery] = useState<Machinery | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showMap, setShowMap] = useState(false)
@@ -44,6 +46,27 @@ export default function MaquinariasPage() {
     console.log('Maquinarias en contexto:', machinery)
   }, [machinery])
 
+  const getActiveWorkOrder = (machineryId: number) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return workOrders.find(wo => {
+      // Check if WO is active
+      if (wo.status === 'completada' || wo.status === 'cancelada') return false
+
+      const hasMachine = wo.assigned_machinery.includes(machineryId)
+      if (!hasMachine) return false
+
+      // Check dates
+      const start = new Date(wo.planned_start_date)
+      const end = new Date(wo.planned_end_date)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(0, 0, 0, 0)
+
+      return today >= start && today <= end
+    })
+  }
+
   const filteredMachinery = machinery.filter(item => {
     const matchesSearch = item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,7 +74,16 @@ export default function MaquinariasPage() {
     const matchesType = typeFilter === 'all' || item.type === typeFilter
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter
 
-    return matchesSearch && matchesType && matchesStatus
+    let matchesActiveFilter = true
+    if (activeFilter === 'available') {
+      matchesActiveFilter = item.status === 'disponible' && !getActiveWorkOrder(item.id)
+    } else if (activeFilter === 'in_use') {
+      matchesActiveFilter = !!getActiveWorkOrder(item.id)
+    } else if (activeFilter === 'maintenance') {
+      matchesActiveFilter = item.status === 'en_mantencion'
+    }
+
+    return matchesSearch && matchesType && matchesStatus && matchesActiveFilter
   })
 
   // Calcular paginación
@@ -63,7 +95,7 @@ export default function MaquinariasPage() {
   // Resetear a página 1 cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, typeFilter, statusFilter])
+  }, [searchTerm, typeFilter, statusFilter, activeFilter])
 
   // Función para determinar la categoría de la maquinaria
   const getMachineryCategory = (mach: Machinery): string => {
@@ -169,7 +201,8 @@ export default function MaquinariasPage() {
     }
   }
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string, isInUse?: boolean) => {
+    if (isInUse) return 'info'
     switch (status) {
       case 'disponible':
         return 'success' as const
@@ -184,7 +217,8 @@ export default function MaquinariasPage() {
     }
   }
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status: string, isInUse?: boolean) => {
+    if (isInUse) return 'En Uso'
     switch (status) {
       case 'disponible':
         return 'Disponible'
@@ -249,14 +283,17 @@ export default function MaquinariasPage() {
             <MapPin className="h-4 w-4" />
             <span>Ver Mapa</span>
           </button>
-          <button
-            type="button"
-            className="flex items-center space-x-2 h-10 px-4 text-sm font-semibold rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white transition-colors shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/50 focus-visible:ring-offset-2"
-            onClick={() => setShowNewMachineryModal(true)}
-          >
-            <Plus className="h-4 w-4" />
-            <span>Nueva Maquinaria</span>
-          </button>
+
+          {currentUser?.role === 'administrador' && (
+            <button
+              type="button"
+              className="flex items-center space-x-2 h-10 px-4 text-sm font-semibold rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white transition-colors shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/50 focus-visible:ring-offset-2"
+              onClick={() => setShowNewMachineryModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Nueva Maquinaria</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -310,162 +347,201 @@ export default function MaquinariasPage() {
 
       {/* Estadísticas rápidas - DESPUÉS de filtros */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Equipos</p>
-                <p className="text-2xl font-bold text-gray-900">{machinery.length}</p>
+        <div onClick={() => setActiveFilter('all')} className="cursor-pointer transition-transform hover:scale-105">
+          <Card className={`${activeFilter === 'all' ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Equipos</p>
+                  <p className="text-2xl font-bold text-gray-900">{machinery.length}</p>
+                </div>
+                <Truck className="h-8 w-8 text-blue-500" />
               </div>
-              <Truck className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Disponibles</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {machinery.filter(m => m.status === 'disponible').length}
-                </p>
+        <div onClick={() => setActiveFilter('available')} className="cursor-pointer transition-transform hover:scale-105">
+          <Card className={`${activeFilter === 'available' ? 'ring-2 ring-green-500 border-green-500' : ''}`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Disponibles</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {machinery.filter(m => m.status === 'disponible' && !getActiveWorkOrder(m.id)).length}
+                  </p>
+                </div>
+                <Settings className="h-8 w-8 text-green-500" />
               </div>
-              <Settings className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">En Faena</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {machinery.filter(m => m.status === 'en_faena').length}
-                </p>
+        <div onClick={() => setActiveFilter('in_use')} className="cursor-pointer transition-transform hover:scale-105">
+          <Card className={`${activeFilter === 'in_use' ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">En Uso (Hoy)</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {machinery.filter(m => !!getActiveWorkOrder(m.id)).length}
+                  </p>
+                </div>
+                <Activity className="h-8 w-8 text-blue-500" />
               </div>
-              <Clock className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">En Mantención</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {machinery.filter(m => m.status === 'en_mantencion').length}
-                </p>
+        <div onClick={() => setActiveFilter('maintenance')} className="cursor-pointer transition-transform hover:scale-105">
+          <Card className={`${activeFilter === 'maintenance' ? 'ring-2 ring-yellow-500 border-yellow-500' : ''}`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">En Mantención</p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {machinery.filter(m => m.status === 'en_mantencion').length}
+                  </p>
+                </div>
+                <Wrench className="h-8 w-8 text-yellow-500" />
               </div>
-              <Wrench className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Lista de maquinarias con paginación */}
       <div className="space-y-6">
         {/* Grid de maquinarias - 9 por página */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {paginatedMachinery.map((item) => (
-            <Card key={item.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    {getTypeIcon(item.type)}
+          {paginatedMachinery.map((item) => {
+            const activeWO = getActiveWorkOrder(item.id)
+            const isInUse = !!activeWO
+
+            return (
+              <Card key={item.id} className={`hover:shadow-md transition-shadow ${isInUse ? 'border-blue-300 bg-blue-50/30' : ''}`}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getTypeIcon(item.type)}
+                      <div>
+                        <CardTitle className="text-base">{item.brand} {item.model}</CardTitle>
+                      </div>
+                    </div>
+                    <Badge variant={getStatusBadgeVariant(item.status, isInUse)} size="sm">
+                      {getStatusLabel(item.status, isInUse)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  {/* Carrusel de imágenes - más pequeño */}
+                  {item.images && item.images.length > 0 ? (
+                    <div className="mb-2 h-48 rounded-lg overflow-hidden bg-gray-100 relative flex items-center justify-center border border-gray-100 dark:border-gray-700">
+                      <img
+                        src={item.images[0]?.url || ''}
+                        alt={item.images[0]?.alt || `${item.brand} ${item.model}`}
+                        className="w-full h-full object-contain p-1"
+                      />
+                    </div>
+                  ) : (
+                    <div className="mb-2 h-48 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-100 dark:border-gray-700">
+                      <Truck className="h-12 w-12 text-gray-400" />
+                    </div>
+                  )}
+
+                  {/* Visual indicator for active usage */}
+                  {activeWO && (
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-md border border-blue-200 dark:border-blue-800 text-sm mb-2">
+                      <div className="flex items-start gap-2">
+                        <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-blue-800 dark:text-blue-300 text-xs uppercase tracking-wide truncate">
+                            Trabajando en:
+                          </p>
+                          <p className="font-medium text-blue-900 dark:text-blue-100 truncate">
+                            {activeWO.task_type}
+                          </p>
+                          <p className="text-xs text-blue-700 dark:text-blue-300 truncate">
+                            OT #{(activeWO as any).numero_orden || activeWO.id} • {activeWO.field_name}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <CardTitle className="text-base">{item.brand} {item.model}</CardTitle>
+                      <p className="text-gray-500">Año</p>
+                      <p className="font-medium">{item.year}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Patente</p>
+                      <p className="font-medium">{item.patent}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Horas</p>
+                      <p className="font-medium">{formatHours(item.total_hours)}</p>
+                    </div>
+                    {currentUser?.role === 'administrador' && (
+                      <div>
+                        <p className="text-gray-500">Costo/Hora</p>
+                        <p className="font-medium text-xs">{formatCLP(item.hourly_cost)}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {item.fuel_capacity > 0 && (
+                    <div className="flex items-center space-x-1 text-xs text-gray-600">
+                      <Fuel className="h-3 w-3" />
+                      <span>{item.fuel_capacity}L</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-1 text-xs text-gray-600">
+                    <MapPin className="h-3 w-3" />
+                    <span className="truncate">{item.last_location.address}</span>
+                  </div>
+
+                  <div className="flex justify-between pt-2 border-t">
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleView(item)}
+                        title="Ver detalles"
+                        className="h-7 w-7 p-0"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      {currentUser?.role === 'administrador' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(item)}
+                          title="Editar"
+                          className="h-7 w-7 p-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {currentUser?.role === 'administrador' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(item)}
+                          title="Eliminar"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <Badge variant={getStatusBadgeVariant(item.status)} size="sm">
-                    {getStatusLabel(item.status)}
-                  </Badge>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-3">
-                {/* Carrusel de imágenes - más pequeño */}
-                {item.images && item.images.length > 0 ? (
-                  <div className="mb-2 h-32 rounded-lg overflow-hidden bg-gray-100 relative flex items-center justify-center">
-                    <img
-                      src={item.images[0]?.url || ''}
-                      alt={item.images[0]?.alt || `${item.brand} ${item.model}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="mb-2 h-32 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <Truck className="h-8 w-8 text-gray-400" />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p className="text-gray-500">Año</p>
-                    <p className="font-medium">{item.year}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Patente</p>
-                    <p className="font-medium">{item.patent}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Horas</p>
-                    <p className="font-medium">{formatHours(item.total_hours)}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Costo/Hora</p>
-                    <p className="font-medium text-xs">{formatCLP(item.hourly_cost)}</p>
-                  </div>
-                </div>
-
-                {item.fuel_capacity > 0 && (
-                  <div className="flex items-center space-x-1 text-xs text-gray-600">
-                    <Fuel className="h-3 w-3" />
-                    <span>{item.fuel_capacity}L</span>
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-1 text-xs text-gray-600">
-                  <MapPin className="h-3 w-3" />
-                  <span className="truncate">{item.last_location.address}</span>
-                </div>
-
-                <div className="flex justify-between pt-2 border-t">
-                  <div className="flex space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleView(item)}
-                      title="Ver detalles"
-                      className="h-7 w-7 p-0"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(item)}
-                      title="Editar"
-                      className="h-7 w-7 p-0"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(item)}
-                      title="Eliminar"
-                      className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         {/* Paginación */}
@@ -677,6 +753,10 @@ export default function MaquinariasPage() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <AuditLogViewer tableName="machinery" recordId={selectedMachinery.id} />
             </div>
 
             <div className="flex space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -1098,6 +1178,7 @@ function EditMachineryModal({
   onClose: () => void
   updateMachinery: (id: number, machinery: Partial<Machinery>) => void
 }) {
+  const { currentUser } = useApp()
   const [images, setImages] = useState<MachineryImage[]>([])
 
   const {
@@ -1296,29 +1377,37 @@ function EditMachineryModal({
                 </div>
 
                 {/* Estado */}
+                {/* Estado - READ ONLY */}
                 <div className="space-y-2">
-                  <Label htmlFor="edit_status" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                    <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span>Estado *</span>
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="edit_status" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                      <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span>Estado *</span>
+                    </Label>
+                    <span className="text-xs text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                      Automático
+                    </span>
+                  </div>
                   <Controller
                     name="status"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className={`h-11 ${errors.status ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}>
-                          <SelectValue placeholder="Selecciona un estado" className="dark:text-gray-400" />
+                      <Select value={field.value} disabled={true}>
+                        <SelectTrigger className="h-11 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 cursor-not-allowed opacity-80">
+                          <SelectValue placeholder="Selecciona un estado" />
                         </SelectTrigger>
-                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                          <SelectItem value="disponible" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Disponible</SelectItem>
-                          <SelectItem value="en_faena" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">En Faena</SelectItem>
-                          <SelectItem value="en_mantencion" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">En Mantención</SelectItem>
-                          <SelectItem value="fuera_servicio" className="dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:bg-gray-700">Fuera de Servicio</SelectItem>
+                        <SelectContent>
+                          <SelectItem value="disponible">Disponible</SelectItem>
+                          <SelectItem value="en_faena">En Faena</SelectItem>
+                          <SelectItem value="en_mantencion">En Mantención</SelectItem>
+                          <SelectItem value="fuera_servicio">Fuera de Servicio</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
                   />
-                  {errors.status && <p className="text-red-500 text-sm mt-1 flex items-center space-x-1"><AlertTriangle className="h-3 w-3" /><span>{errors.status.message}</span></p>}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                    El estado cambia automáticamente gestión de mantenimientos (inicio/fin) y asignación de trabajos.
+                  </p>
                 </div>
 
                 {/* Horas Totales */}
@@ -1360,23 +1449,25 @@ function EditMachineryModal({
                 </div>
 
                 {/* Costo por Hora */}
-                <div className="space-y-2">
-                  <Label htmlFor="edit_hourly_cost" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
-                    <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span>Costo por Hora ($)</span>
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="edit_hourly_cost"
-                      type="number"
-                      {...register('hourly_cost', { valueAsNumber: true })}
-                      placeholder="Ej: 45000"
-                      className={`h-11 pl-10 ${errors.hourly_cost ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                    />
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                {currentUser?.role === 'administrador' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_hourly_cost" className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 font-medium">
+                      <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span>Costo por Hora ($)</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="edit_hourly_cost"
+                        type="number"
+                        {...register('hourly_cost', { valueAsNumber: true })}
+                        placeholder="Ej: 45000"
+                        className={`h-11 pl-10 ${errors.hourly_cost ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                      />
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                    {errors.hourly_cost && <p className="text-red-500 text-sm mt-1 flex items-center space-x-1"><AlertTriangle className="h-3 w-3" /><span>{errors.hourly_cost.message}</span></p>}
                   </div>
-                  {errors.hourly_cost && <p className="text-red-500 text-sm mt-1 flex items-center space-x-1"><AlertTriangle className="h-3 w-3" /><span>{errors.hourly_cost.message}</span></p>}
-                </div>
+                )}
 
                 {/* Ubicación */}
                 <div className="md:col-span-2 space-y-2">

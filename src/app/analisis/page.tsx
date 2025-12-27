@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useApp } from '@/contexts/AppContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { 
-  BarChart3, TrendingUp, TrendingDown, 
-  Activity, Target, Zap, Clock, 
+import {
+  BarChart3, TrendingUp, TrendingDown,
+  Activity, Target, Zap, Clock,
   DollarSign, Truck, Wrench, Fuel, Package,
   Calendar, Filter, Download, RefreshCw, Eye,
   AlertTriangle, CheckCircle, XCircle, Info
@@ -44,11 +46,20 @@ interface AnalyticsData {
 }
 
 export default function AnalisisPage() {
+  const { currentUser } = useApp()
+  const router = useRouter()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [timeRange, setTimeRange] = useState('30d')
   const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'administrador') {
+      router.push('/dashboard')
+      toast.error('No tienes permisos para acceder a esta sección')
+    }
+  }, [currentUser, router])
 
   // Detectar modo oscuro
   useEffect(() => {
@@ -59,9 +70,9 @@ export default function AnalisisPage() {
         setIsDarkMode(theme === 'dark')
       }
     }
-    
+
     checkDarkMode()
-    
+
     // Observar cambios en el atributo data-theme
     const observer = new MutationObserver(checkDarkMode)
     if (typeof window !== 'undefined') {
@@ -70,7 +81,7 @@ export default function AnalisisPage() {
         attributeFilter: ['data-theme']
       })
     }
-    
+
     return () => observer.disconnect()
   }, [])
 
@@ -153,7 +164,7 @@ export default function AnalisisPage() {
         productivity: { nextMonth: 90, trend: 'up' }
       }
     }
-    
+
     setData(mockData)
     setLoading(false)
   }, [])
@@ -207,7 +218,7 @@ export default function AnalisisPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -220,7 +231,7 @@ export default function AnalisisPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -233,7 +244,7 @@ export default function AnalisisPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -262,20 +273,20 @@ export default function AnalisisPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data?.trends.fuelConsumption}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     fontSize={12}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                     tickFormatter={(value) => new Date(value).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     fontSize={12}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                     tickFormatter={(value) => `${value}L`}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={({ active, payload, label }) => {
                       if (!active || !payload || !payload.length) return null
                       const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -288,16 +299,16 @@ export default function AnalisisPage() {
                           padding: '12px',
                           color: isDark ? '#E7E9EA' : '#0F1419'
                         }}>
-                          <p style={{ 
-                            margin: '0 0 8px 0', 
+                          <p style={{
+                            margin: '0 0 8px 0',
                             fontWeight: 'bold',
                             color: isDark ? '#E7E9EA' : '#0F1419'
                           }}>
                             {new Date(label).toLocaleDateString('es-ES')}
                           </p>
                           {payload.map((entry: any, index: number) => (
-                            <p key={index} style={{ 
-                              margin: '4px 0', 
+                            <p key={index} style={{
+                              margin: '4px 0',
                               color: isDark ? '#E7E9EA' : '#0F1419'
                             }}>
                               <span style={{ color: entry.color }}>●</span> Consumo: {entry.value}L
@@ -307,10 +318,10 @@ export default function AnalisisPage() {
                       )
                     }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#f59e0b" 
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#f59e0b"
                     fill="#fef3c7"
                     strokeWidth={2}
                   />
@@ -320,7 +331,7 @@ export default function AnalisisPage() {
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
                 <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Promedio Semanal</p>
-                <p className="text-xl font-bold text-orange-800 dark:text-orange-300">       
+                <p className="text-xl font-bold text-orange-800 dark:text-orange-300">
                   {data?.trends?.fuelConsumption?.length ? Math.round(data.trends.fuelConsumption.reduce((acc, curr) => acc + curr.value, 0) / data.trends.fuelConsumption.length) : 0}L
                 </p>
               </div>
@@ -346,20 +357,20 @@ export default function AnalisisPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data?.trends.maintenanceCosts}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     fontSize={12}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                     tickFormatter={(value) => new Date(value).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     fontSize={12}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                     tickFormatter={(value) => formatCLP(value)}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={({ active, payload, label }) => {
                       if (!active || !payload || !payload.length) return null
                       const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -372,16 +383,16 @@ export default function AnalisisPage() {
                           padding: '12px',
                           color: isDark ? '#E7E9EA' : '#0F1419'
                         }}>
-                          <p style={{ 
-                            margin: '0 0 8px 0', 
+                          <p style={{
+                            margin: '0 0 8px 0',
                             fontWeight: 'bold',
                             color: isDark ? '#E7E9EA' : '#0F1419'
                           }}>
                             {new Date(label).toLocaleDateString('es-ES')}
                           </p>
                           {payload.map((entry: any, index: number) => (
-                            <p key={index} style={{ 
-                              margin: '4px 0', 
+                            <p key={index} style={{
+                              margin: '4px 0',
                               color: isDark ? '#E7E9EA' : '#0F1419'
                             }}>
                               <span style={{ color: entry.color }}>●</span> Costo: {formatCLP(typeof entry.value === 'number' ? entry.value : 0)}
@@ -391,8 +402,8 @@ export default function AnalisisPage() {
                       )
                     }}
                   />
-                  <Bar 
-                    dataKey="value" 
+                  <Bar
+                    dataKey="value"
                     fill="#3b82f6"
                     radius={[4, 4, 0, 0]}
                   />
@@ -440,10 +451,9 @@ export default function AnalisisPage() {
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            item.status === 'excellent' ? 'bg-green-500' : 'bg-blue-500'
-                          }`}
+                        <div
+                          className={`h-2 rounded-full ${item.status === 'excellent' ? 'bg-green-500' : 'bg-blue-500'
+                            }`}
                           style={{ width: `${item.efficiency}%` }}
                         ></div>
                       </div>
@@ -453,7 +463,7 @@ export default function AnalisisPage() {
                 ))}
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">Utilización de Recursos</h3>
               <div className="space-y-3">
@@ -467,7 +477,7 @@ export default function AnalisisPage() {
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
+                        <div
                           className="h-2 rounded-full bg-purple-500"
                           style={{ width: `${item.value}%` }}
                         ></div>
@@ -499,20 +509,20 @@ export default function AnalisisPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data?.trends.productivity}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     fontSize={12}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                     tickFormatter={(value) => new Date(value).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                     fontSize={12}
                     tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                     tickFormatter={(value) => `${value}%`}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={({ active, payload, label }) => {
                       if (!active || !payload || !payload.length) return null
                       const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -525,16 +535,16 @@ export default function AnalisisPage() {
                           padding: '12px',
                           color: isDark ? '#E7E9EA' : '#0F1419'
                         }}>
-                          <p style={{ 
-                            margin: '0 0 8px 0', 
+                          <p style={{
+                            margin: '0 0 8px 0',
                             fontWeight: 'bold',
                             color: isDark ? '#E7E9EA' : '#0F1419'
                           }}>
                             {new Date(label).toLocaleDateString('es-ES')}
                           </p>
                           {payload.map((entry: any, index: number) => (
-                            <p key={index} style={{ 
-                              margin: '4px 0', 
+                            <p key={index} style={{
+                              margin: '4px 0',
                               color: isDark ? '#E7E9EA' : '#0F1419'
                             }}>
                               <span style={{ color: entry.color }}>●</span> Productividad: {entry.value}%
@@ -544,10 +554,10 @@ export default function AnalisisPage() {
                       )
                     }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#10b981" 
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#10b981"
                     strokeWidth={3}
                     dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
                     activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
@@ -608,7 +618,7 @@ export default function AnalisisPage() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     content={({ active, payload }) => {
                       if (!active || !payload || !payload.length) return null
                       const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -622,8 +632,8 @@ export default function AnalisisPage() {
                           color: isDark ? '#E7E9EA' : '#0F1419'
                         }}>
                           {payload.map((entry: any, index: number) => (
-                            <p key={index} style={{ 
-                              margin: '4px 0', 
+                            <p key={index} style={{
+                              margin: '4px 0',
                               color: isDark ? '#E7E9EA' : '#0F1419'
                             }}>
                               <span style={{ color: entry.color }}>●</span> {entry.name}: {entry.value}%
@@ -679,8 +689,8 @@ export default function AnalisisPage() {
               </div>
               <div className="ml-2 flex-shrink-0">
                 <Badge variant={getInsightBadgeVariant(insight.impact)} size="sm">
-                  {insight.impact === 'high' ? 'Alto' : 
-                   insight.impact === 'medium' ? 'Medio' : 'Bajo'}
+                  {insight.impact === 'high' ? 'Alto' :
+                    insight.impact === 'medium' ? 'Medio' : 'Bajo'}
                 </Badge>
               </div>
             </div>
@@ -691,26 +701,23 @@ export default function AnalisisPage() {
             </p>
 
             {/* Recomendación */}
-            <div className={`p-3 rounded-lg border ${
-              insight.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200/50 dark:border-yellow-800/50' :
-              insight.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-200/50 dark:border-green-800/50' :
-              insight.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-200/50 dark:border-red-800/50' :
-              'bg-blue-50 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-800/50'
-            }`}>
-              <p className={`text-xs font-semibold mb-1 ${
-                insight.type === 'warning' ? 'text-yellow-800 dark:text-yellow-300' :
-                insight.type === 'success' ? 'text-green-800 dark:text-green-300' :
-                insight.type === 'error' ? 'text-red-800 dark:text-red-300' :
-                'text-blue-800 dark:text-blue-300'
+            <div className={`p-3 rounded-lg border ${insight.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200/50 dark:border-yellow-800/50' :
+                insight.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-200/50 dark:border-green-800/50' :
+                  insight.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-200/50 dark:border-red-800/50' :
+                    'bg-blue-50 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-800/50'
               }`}>
+              <p className={`text-xs font-semibold mb-1 ${insight.type === 'warning' ? 'text-yellow-800 dark:text-yellow-300' :
+                  insight.type === 'success' ? 'text-green-800 dark:text-green-300' :
+                    insight.type === 'error' ? 'text-red-800 dark:text-red-300' :
+                      'text-blue-800 dark:text-blue-300'
+                }`}>
                 Recomendación:
               </p>
-              <p className={`text-xs leading-relaxed ${
-                insight.type === 'warning' ? 'text-yellow-700 dark:text-yellow-200' :
-                insight.type === 'success' ? 'text-green-700 dark:text-green-200' :
-                insight.type === 'error' ? 'text-red-700 dark:text-red-200' :
-                'text-blue-700 dark:text-blue-200'
-              }`}>
+              <p className={`text-xs leading-relaxed ${insight.type === 'warning' ? 'text-yellow-700 dark:text-yellow-200' :
+                  insight.type === 'success' ? 'text-green-700 dark:text-green-200' :
+                    insight.type === 'error' ? 'text-red-700 dark:text-red-200' :
+                      'text-blue-700 dark:text-blue-200'
+                }`}>
                 {insight.recommendation}
               </p>
             </div>
@@ -775,20 +782,20 @@ export default function AnalisisPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data?.trends.revenue}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e2e8f0"} />
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                   fontSize={12}
                   tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   tickFormatter={(value) => new Date(value).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
                 />
-                <YAxis 
+                <YAxis
                   stroke={isDarkMode ? "#9CA3AF" : "#64748b"}
                   fontSize={12}
                   tick={{ fill: isDarkMode ? "#E7E9EA" : "#64748b" }}
                   tickFormatter={(value) => formatCLP(value)}
                 />
-                <Tooltip 
+                <Tooltip
                   content={({ active, payload, label }) => {
                     if (!active || !payload || !payload.length) return null
                     const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
@@ -801,16 +808,16 @@ export default function AnalisisPage() {
                         padding: '12px',
                         color: isDark ? '#E7E9EA' : '#0F1419'
                       }}>
-                        <p style={{ 
-                          margin: '0 0 8px 0', 
+                        <p style={{
+                          margin: '0 0 8px 0',
                           fontWeight: 'bold',
                           color: isDark ? '#E7E9EA' : '#0F1419'
                         }}>
                           {new Date(label).toLocaleDateString('es-ES')}
                         </p>
                         {payload.map((entry: any, index: number) => (
-                          <p key={index} style={{ 
-                            margin: '4px 0', 
+                          <p key={index} style={{
+                            margin: '4px 0',
                             color: isDark ? '#E7E9EA' : '#0F1419'
                           }}>
                             <span style={{ color: entry.color }}>●</span> Ingresos: {formatCLP(typeof entry.value === 'number' ? entry.value : 0)}
@@ -820,10 +827,10 @@ export default function AnalisisPage() {
                     )
                   }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#10b981" 
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#10b981"
                   fill="#d1fae5"
                   strokeWidth={2}
                 />
@@ -925,11 +932,10 @@ export default function AnalisisPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                activeTab === tab.id
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeTab === tab.id
                   ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                   : 'border-transparent text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
+                }`}
             >
               {tab.icon}
               <span>{tab.name}</span>

@@ -138,8 +138,9 @@ export function NewOrderModal({
   addWorkOrder: (workOrder: Omit<WorkOrder, 'id' | 'created_at' | 'updated_at'>) => void
   machinery: Machinery[]
 }) {
-  const { clients, fetchData } = useApp()
+  const { clients, fetchData, workOrders } = useApp()
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
+  const [machineryFilter, setMachineryFilter] = useState<'todos' | 'disponibles' | 'mantencion' | 'ocupadas'>('todos')
   const [formData, setFormData] = useState({
     client_id: 0,
     field: '',
@@ -160,6 +161,50 @@ export function NewOrderModal({
   const filteredMachinery = formData.taskType
     ? machinery.filter(m => getRelevantMachineryForTaskType(formData.taskType, machinery).includes(m.id))
     : machinery
+
+  // Helper to check availability
+  const getMachineryAvailability = (machineryId: number) => {
+    const startDate = new Date(formData.plannedStartDate)
+    const endDate = new Date(formData.plannedEndDate)
+
+    // Check machine status
+    const machine = machinery.find(m => m.id === machineryId)
+    if (machine) {
+      if (machine.status === 'en_mantencion') return { available: false, reason: 'En Mantención' }
+      if (machine.status === 'fuera_servicio') return { available: false, reason: 'Fuera de Servicio' }
+    }
+
+    // Reset hours for pure date comparison
+    startDate.setHours(0, 0, 0, 0)
+    endDate.setHours(0, 0, 0, 0)
+
+    const conflictingOrder = workOrders.find(wo => {
+      // Check only active orders
+      if (wo.status === 'cancelada' || wo.status === 'completada') return false
+
+      const hasMachine = wo.assigned_machinery.includes(machineryId)
+
+      if (!hasMachine) return false
+
+      const woStart = new Date(wo.planned_start_date)
+      const woEnd = new Date(wo.planned_end_date)
+      woStart.setHours(0, 0, 0, 0)
+      woEnd.setHours(0, 0, 0, 0)
+
+      // Check overlap
+      return startDate <= woEnd && endDate >= woStart
+    })
+
+    if (conflictingOrder) {
+      return {
+        available: false,
+        reason: `Ocupada en OT #${(conflictingOrder as any).numero_orden || conflictingOrder.id}`
+      }
+    }
+    return { available: true, reason: '' }
+  }
+
+  const availableCount = filteredMachinery.filter(m => getMachineryAvailability(m.id).available).length
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => {
@@ -199,6 +244,13 @@ export function NewOrderModal({
     if (!formData.plannedEndDate) newErrors.plannedEndDate = 'Fecha de fin es requerida'
     if (formData.assignedMachinery.length === 0) newErrors.assignedMachinery = 'Al menos una maquinaria es requerida'
     if (!formData.description.trim()) newErrors.description = 'Descripción es requerida'
+
+    // Check for unavailable machinery that might be selected
+    const hasUnavailable = formData.assignedMachinery.some(id => !getMachineryAvailability(id).available)
+    if (hasUnavailable) {
+      newErrors.assignedMachinery = 'Hay maquinaria seleccionada que no está disponible'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -206,7 +258,7 @@ export function NewOrderModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) {
-      toast.error('Por favor completa todos los campos requeridos')
+      toast.error('Por favor completa todos los campos requeridos y verifica la disponibilidad')
       return
     }
 
@@ -486,40 +538,139 @@ export function NewOrderModal({
 
             {/* Maquinarias Asignadas */}
             <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between pb-4">
-                <div className="flex items-center space-x-2">
-                  <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Maquinarias Asignadas *</h2>
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Maquinarias Asignadas *</h2>
+                  </div>
+                  {formData.taskType && (
+                    <Badge variant="default" className="text-xs">
+                      {filteredMachinery.length} Total
+                    </Badge>
+                  )}
                 </div>
+
+                {/* Filtros de Estado */}
                 {formData.taskType && (
-                  <Badge variant="info" className="text-xs dark:bg-blue-900/30 dark:text-blue-300">
-                    {filteredMachinery.length} maquinarias disponibles para &quot;{formData.taskType}&quot;
-                  </Badge>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMachineryFilter('todos')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${machineryFilter === 'todos'
+                        ? 'bg-gray-800 text-white border-gray-800 dark:bg-white dark:text-gray-900'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                        }`}
+                    >
+                      Todos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMachineryFilter('disponibles')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${machineryFilter === 'disponibles'
+                        ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800 ring-1 ring-green-500'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-green-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-green-900/20'
+                        }`}
+                    >
+                      Disponibles
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMachineryFilter('mantencion')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${machineryFilter === 'mantencion'
+                        ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800 ring-1 ring-amber-500'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-amber-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-amber-900/20'
+                        }`}
+                    >
+                      En Mantención
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMachineryFilter('ocupadas')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${machineryFilter === 'ocupadas'
+                        ? 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800 ring-1 ring-red-500'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-red-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-red-900/20'
+                        }`}
+                    >
+                      Ocupadas
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {formData.taskType ? (
-                  filteredMachinery.length > 0 ? (
-                    filteredMachinery.map((mach) => (
-                      <label
-                        key={mach.id}
-                        className={`flex items-center space-x-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.assignedMachinery.includes(mach.id)
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600'
-                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                          }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.assignedMachinery.includes(mach.id)}
-                          onChange={() => handleMachineryToggle(mach.id)}
-                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:bg-gray-700"
-                        />
-                        <div className="flex-1">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{mach.brand} {mach.model}</span>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{mach.patent}</p>
-                        </div>
-                      </label>
-                    ))
+                  filteredMachinery
+                    .filter(mach => {
+                      if (machineryFilter === 'todos') return true
+                      const av = getMachineryAvailability(mach.id)
+                      const isMaint = !av.available && (av.reason === 'En Mantención' || av.reason === 'Fuera de Servicio')
+                      const isBusy = !av.available && !isMaint
+
+                      if (machineryFilter === 'disponibles') return av.available
+                      if (machineryFilter === 'mantencion') return isMaint
+                      if (machineryFilter === 'ocupadas') return isBusy
+                      return true
+                    })
+                    .length > 0 ? (
+                    filteredMachinery
+                      .filter(mach => {
+                        if (machineryFilter === 'todos') return true
+                        const av = getMachineryAvailability(mach.id)
+                        const isMaint = !av.available && (av.reason === 'En Mantención' || av.reason === 'Fuera de Servicio')
+                        const isBusy = !av.available && !isMaint
+
+                        if (machineryFilter === 'disponibles') return av.available
+                        if (machineryFilter === 'mantencion') return isMaint
+                        if (machineryFilter === 'ocupadas') return isBusy
+                        return true
+                      })
+                      .map((mach) => {
+                        const availability = getMachineryAvailability(mach.id)
+                        const isMaintenance = availability.reason === 'En Mantención'
+
+                        return (
+                          <label
+                            key={mach.id}
+                            className={`flex items-center space-x-2 p-3 border-2 rounded-lg transition-all ${!availability.available
+                              ? isMaintenance
+                                ? 'border-amber-200 bg-amber-50 opacity-90 cursor-not-allowed dark:bg-amber-900/20 dark:border-amber-800'
+                                : 'border-red-200 bg-red-50 opacity-90 cursor-not-allowed dark:bg-red-900/20 dark:border-red-800'
+                              : formData.assignedMachinery.includes(mach.id)
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 cursor-pointer'
+                                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer'
+                              }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.assignedMachinery.includes(mach.id)}
+                              onChange={() => {
+                                if (availability.available) {
+                                  handleMachineryToggle(mach.id)
+                                }
+                              }}
+                              disabled={!availability.available}
+                              className={`rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:bg-gray-700 ${!availability.available ? 'cursor-not-allowed opacity-50' : ''}`}
+                            />
+                            <div className="flex-1">
+                              <span className={`text-sm font-medium ${!availability.available
+                                ? isMaintenance
+                                  ? 'text-amber-700 dark:text-amber-400'
+                                  : 'text-red-700 dark:text-red-400'
+                                : 'text-gray-700 dark:text-gray-200'
+                                }`}>
+                                {mach.brand} {mach.model}
+                              </span>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{mach.patent}</p>
+                              {!availability.available && (
+                                <p className={`text-xs font-medium mt-1 ${isMaintenance ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'
+                                  }`}>
+                                  {availability.reason}
+                                </p>
+                              )}
+                            </div>
+                          </label>
+                        )
+                      })
                   ) : (
                     <div className="col-span-full p-6 text-center bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                       <Truck className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />

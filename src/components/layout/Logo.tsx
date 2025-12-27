@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { BRANDING } from '@/lib/branding'
 
 interface LogoProps {
   variant?: 'light' | 'dark' | 'default'
@@ -52,8 +53,8 @@ export function Logo({
     )}>
       <div className={cn('relative', currentSize.icon)}>
         <Image
-          src="/images/logo-futamaq-new.png"
-          alt="Futamaq Logo"
+          src={BRANDING.logoPath}
+          alt={`${BRANDING.appName} Logo`}
           fill
           className="object-contain"
           priority
@@ -62,11 +63,11 @@ export function Logo({
       {showText && (
         <div className="ml-2 flex flex-col">
           <span className={cn('font-bold uppercase', currentSize.text, textColors[variant])}>
-            FUTAMAQ
+            {BRANDING.appName.toUpperCase()}
           </span>
           {size !== 'sm' && (
             <span className={cn('font-semibold uppercase', currentSize.subtext, subtextColors[variant])}>
-              Sistema Agrícola
+              {BRANDING.systemName}
             </span>
           )}
         </div>

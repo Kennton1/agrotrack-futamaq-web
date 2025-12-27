@@ -12,9 +12,13 @@ import { ServiceWorkerManager } from "@/components/common/ServiceWorkerManager";
 
 const inter = Inter({ subsets: ["latin"] });
 
+import { BRANDING } from "@/lib/branding";
+
+// ...
+
 export const metadata: Metadata = {
-  title: "AgroTrack FUTAMAQ - Sistema de Gestión Agrícola",
-  description: "Sistema integral de gestión de maquinaria agrícola, órdenes de trabajo y mantenimientos para FUTAMAQ",
+  title: `${BRANDING.appName} - ${BRANDING.systemName}`,
+  description: `Sistema integral de gestión de maquinaria agrícola, órdenes de trabajo y mantenimientos para ${BRANDING.companyName}`,
   manifest: "/manifest.json",
 };
 
@@ -72,24 +76,10 @@ export default function RootLayout({
             <NewAppLayout>
               {children}
             </NewAppLayout>
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: '#1F2937',
-                color: '#fff',
-                borderRadius: '12px',
-                padding: '16px',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
-                border: '1px solid #374151',
-              },
-              success: {
-                duration: 2500,
-                iconTheme: {
-                  primary: '#22c55e',
-                  secondary: '#fff',
-                },
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 3000,
                 style: {
                   background: '#1F2937',
                   color: '#fff',
@@ -98,24 +88,38 @@ export default function RootLayout({
                   boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
                   border: '1px solid #374151',
                 },
-              },
-              error: {
-                duration: 4000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                success: {
+                  duration: 2500,
+                  iconTheme: {
+                    primary: '#22c55e',
+                    secondary: '#fff',
+                  },
+                  style: {
+                    background: '#1F2937',
+                    color: '#fff',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+                    border: '1px solid #374151',
+                  },
                 },
-                style: {
-                  background: '#1F2937',
-                  color: '#fff',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
-                  border: '1px solid #374151',
+                error: {
+                  duration: 4000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                  style: {
+                    background: '#1F2937',
+                    color: '#fff',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+                    border: '1px solid #374151',
+                  },
                 },
-              },
-            }}
-          />
+              }}
+            />
             <ClientOnly>
               <ServiceWorkerManager />
               <AuthDebug />

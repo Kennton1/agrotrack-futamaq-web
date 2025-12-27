@@ -13,6 +13,7 @@ import MobileNavigation from '@/components/mobile/MobileNavigation'
 import GlobalSearch from '@/components/search/GlobalSearch'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
+import { BRANDING } from '@/lib/branding'
 
 const navigationGroups = [
   {
@@ -158,16 +159,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <div className="flex items-center space-x-4">
                   <div className="p-2 bg-white/20 rounded-2xl backdrop-blur-sm relative h-16 w-16 overflow-hidden">
                     <Image
-                      src="/images/logo-futamaq-new.png"
-                      alt="Futamaq Logo"
+                      src={BRANDING.logoPath}
+                      alt={`${BRANDING.appName} Logo`}
                       fill
                       className="object-contain"
                       priority
                     />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold text-white">FUTAMAQ</h1>
-                    <p className="text-primary-100 text-lg">Sistema Agrícola</p>
+                    <h1 className="text-3xl font-bold text-white">{BRANDING.appName.toUpperCase()}</h1>
+                    <p className="text-primary-100 text-lg">{BRANDING.systemName}</p>
                   </div>
                 </div>
 
