@@ -241,11 +241,6 @@ export default function LandingPage() {
                 >
                   Ver Planes y Precios
                 </button>
-                <Link href="/login">
-                  <button className="px-8 py-4 bg-[#111] text-white border border-white/10 rounded-xl font-bold text-lg hover:bg-white/5 transition-all flex items-center justify-center gap-2">
-                    <Smartphone size={20} /> Descargar App
-                  </button>
-                </Link>
               </div>
 
               <div className="mt-10 flex items-center justify-center lg:justify-start gap-6 text-sm text-gray-500">
@@ -615,6 +610,7 @@ export default function LandingPage() {
               </div>
               <p className="text-sm text-gray-500 mb-6">Para empezar a digitalizar sin grandes costos.</p>
               <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Creación de hasta 20 Maq/día</li>
                 <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> App Operadores Offline</li>
                 <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Hoja de Vida Maquinaria</li>
                 <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Control Cargas de Petróleo</li>
@@ -640,7 +636,8 @@ export default function LandingPage() {
               </div>
               <p className="text-sm text-gray-400 mb-6">Velocidad y control para campos en crecimiento.</p>
               <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-white"><Check size={18} className="text-green-500" /> Todo lo del Starter +</li>
+                <li className="flex items-center gap-3 text-white"><Check size={18} className="text-green-500" /> Creación Ilimitada diaria</li>
+                <li className="flex items-center gap-3 text-white"><Check size={18} className="text-green-500" /> Personalizaciones (Costo Extra)</li>
                 <li className="flex items-center gap-3 text-white"><Check size={18} className="text-green-500" /> Alertas de Robo Combustible</li>
                 <li className="flex items-center gap-3 text-white"><Check size={18} className="text-green-500" /> Gestión Taller y Mantenciones</li>
                 <li className="flex items-center gap-3 text-white"><Check size={18} className="text-green-500" /> 5 Usuarios + Roles</li>
@@ -662,10 +659,11 @@ export default function LandingPage() {
               </div>
               <p className="text-sm text-gray-500 mb-6">Potencia ilimitada para grandes agrícolas.</p>
               <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Todo lo del Pro +</li>
+                <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Creación Ilimitada</li>
+                <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Soporte 24/7 Exclusivo</li>
+                <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Mejoras sin costo adicional</li>
                 <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Integración ERP / SAP</li>
                 <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Usuarios Ilimitados</li>
-                <li className="flex items-center gap-3 text-gray-400"><Check size={18} className="text-green-500" /> Soporte Prioritario WhatsApp</li>
               </ul>
               <button
                 onClick={() => handleBuy('Enterprise', 119990)}
